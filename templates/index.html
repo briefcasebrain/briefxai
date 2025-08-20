@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="static/style.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>{{ title }}</h1>
+        </header>
+        
+        <nav>
+            <ul>
+                <li><a href="#hierarchy">Hierarchy View</a></li>
+                <li><a href="#umap">UMAP Visualization</a></li>
+                <li><a href="#conversations">Conversations</a></li>
+            </ul>
+        </nav>
+        
+        <main>
+            <section id="hierarchy">
+                <h2>Cluster Hierarchy</h2>
+                <div id="hierarchy-tree"></div>
+            </section>
+            
+            <section id="umap">
+                <h2>UMAP Visualization</h2>
+                <div id="umap-plot"></div>
+            </section>
+            
+            <section id="conversations">
+                <h2>Conversation Browser</h2>
+                <div id="conversation-list"></div>
+                <div id="conversation-detail"></div>
+            </section>
+        </main>
+    </div>
+    
+    <script>
+        const dataChunks = {{ data_chunks|json }};
+        const passwordProtected = {{ password_protected|json }};
+    </script>
+    <script src="static/app.js"></script>
+</body>
+</html>

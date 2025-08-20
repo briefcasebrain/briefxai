@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BriefXAI - Advanced AI Conversation Analysis Platform</title>
+    <link rel="stylesheet" href="static/enhanced_style.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>🎯 BriefXAI</h1>
+                <span class="version">v2.0</span>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active" data-screen="dashboard">
+                    <span class="icon">📊</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#" class="nav-item" data-screen="new-analysis">
+                    <span class="icon">➕</span>
+                    <span>New Analysis</span>
+                </a>
+                <a href="#" class="nav-item" data-screen="projects">
+                    <span class="icon">📁</span>
+                    <span>Projects</span>
+                </a>
+                <a href="#" class="nav-item" data-screen="templates">
+                    <span class="icon">📋</span>
+                    <span>Templates</span>
+                </a>
+                <a href="#" class="nav-item" data-screen="providers">
+                    <span class="icon">🔌</span>
+                    <span>Providers</span>
+                </a>
+                <a href="#" class="nav-item" data-screen="settings">
+                    <span class="icon">⚙️</span>
+                    <span>Settings</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <span class="icon">👤</span>
+                    <span>User</span>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Dashboard Screen -->
+            <section id="dashboard-screen" class="screen active">
+                <header class="screen-header">
+                    <h2>Dashboard</h2>
+                    <div class="header-actions">
+                        <button class="btn-primary" onclick="showScreen('new-analysis')">
+                            <span class="icon">➕</span> New Analysis
+                        </button>
+                    </div>
+                </header>
+                
+                <div class="dashboard-grid">
+                    <!-- Stats Cards -->
+                    <div class="stats-row">
+                        <div class="stat-card">
+                            <div class="stat-icon">📊</div>
+                            <div class="stat-content">
+                                <h3>Total Analyses</h3>
+                                <p class="stat-value" id="total-analyses">0</p>
+                                <span class="stat-change positive">+12%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">💬</div>
+                            <div class="stat-content">
+                                <h3>Conversations Processed</h3>
+                                <p class="stat-value" id="total-conversations">0</p>
+                                <span class="stat-change positive">+25%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">🎯</div>
+                            <div class="stat-content">
+                                <h3>Insights Generated</h3>
+                                <p class="stat-value" id="total-insights">0</p>
+                                <span class="stat-change positive">+8%</span>
+                            </div>
+                        </div>
+                        
+                        <div class="stat-card">
+                            <div class="stat-icon">⚡</div>
+                            <div class="stat-content">
+                                <h3>Active Projects</h3>
+                                <p class="stat-value" id="active-projects">0</p>
+                                <span class="stat-change neutral">0%</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Recent Analyses -->
+                    <div class="recent-analyses card">
+                        <h3>Recent Analyses</h3>
+                        <div class="analyses-list" id="recent-analyses-list">
+                            <!-- Will be populated dynamically -->
+                        </div>
+                    </div>
+                    
+                    <!-- Provider Status -->
+                    <div class="provider-status card">
+                        <h3>Provider Status</h3>
+                        <div class="provider-list" id="provider-status-list">
+                            <!-- Will be populated dynamically -->
+                        </div>
+                    </div>
+                    
+                    <!-- Activity Chart -->
+                    <div class="activity-chart card">
+                        <h3>Analysis Activity</h3>
+                        <canvas id="activity-chart"></canvas>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- New Analysis Screen -->
+            <section id="new-analysis-screen" class="screen">
+                <header class="screen-header">
+                    <h2>New Analysis</h2>
+                </header>
+                
+                <div class="wizard-container">
+                    <!-- Progress Steps -->
+                    <div class="wizard-steps">
+                        <div class="wizard-step active" data-step="1">
+                            <span class="step-number">1</span>
+                            <span class="step-title">Data Source</span>
+                        </div>
+                        <div class="wizard-step" data-step="2">
+                            <span class="step-number">2</span>
+                            <span class="step-title">Template</span>
+                        </div>
+                        <div class="wizard-step" data-step="3">
+                            <span class="step-number">3</span>
+                            <span class="step-title">Configuration</span>
+                        </div>
+                        <div class="wizard-step" data-step="4">
+                            <span class="step-number">4</span>
+                            <span class="step-title">Review</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Wizard Content -->
+                    <div class="wizard-content">
+                        <!-- Step 1: Data Source -->
+                        <div class="wizard-panel active" data-panel="1">
+                            <h3>Select Data Source</h3>
+                            
+                            <div class="data-source-options">
+                                <div class="source-card" onclick="selectDataSource('upload')">
+                                    <div class="source-icon">📁</div>
+                                    <h4>Upload Files</h4>
+                                    <p>Upload JSON, CSV, or Parquet files</p>
+                                </div>
+                                
+                                <div class="source-card" onclick="selectDataSource('paste')">
+                                    <div class="source-icon">📋</div>
+                                    <h4>Paste Data</h4>
+                                    <p>Paste conversation data directly</p>
+                                </div>
+                                
+                                <div class="source-card" onclick="selectDataSource('api')">
+                                    <div class="source-icon">🔗</div>
+                                    <h4>API Integration</h4>
+                                    <p>Connect to external API</p>
+                                </div>
+                                
+                                <div class="source-card" onclick="selectDataSource('example')">
+                                    <div class="source-icon">🎲</div>
+                                    <h4>Example Data</h4>
+                                    <p>Use sample conversations</p>
+                                </div>
+                            </div>
+                            
+                            <div id="data-source-content" class="source-content">
+                                <!-- Dynamic content based on selection -->
+                            </div>
+                        </div>
+                        
+                        <!-- Step 2: Template Selection -->
+                        <div class="wizard-panel" data-panel="2">
+                            <h3>Choose Analysis Template</h3>
+                            
+                            <div class="template-grid">
+                                <div class="template-card" onclick="selectTemplate('customer-support')">
+                                    <div class="template-header">
+                                        <span class="template-icon">🎧</span>
+                                        <span class="template-badge">Popular</span>
+                                    </div>
+                                    <h4>Customer Support</h4>
+                                    <p>Analyze support conversations for common issues and sentiment</p>
+                                    <ul class="template-features">
+                                        <li>Sentiment analysis</li>
+                                        <li>Issue categorization</li>
+                                        <li>Resolution tracking</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="template-card" onclick="selectTemplate('sales')">
+                                    <div class="template-header">
+                                        <span class="template-icon">💼</span>
+                                        <span class="template-badge">Business</span>
+                                    </div>
+                                    <h4>Sales Conversations</h4>
+                                    <p>Track opportunities, objections, and deal stages</p>
+                                    <ul class="template-features">
+                                        <li>Opportunity detection</li>
+                                        <li>Objection analysis</li>
+                                        <li>Deal stage tracking</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="template-card" onclick="selectTemplate('medical')">
+                                    <div class="template-header">
+                                        <span class="template-icon">🏥</span>
+                                        <span class="template-badge">Healthcare</span>
+                                    </div>
+                                    <h4>Medical Consultations</h4>
+                                    <p>Analyze patient interactions and symptom discussions</p>
+                                    <ul class="template-features">
+                                        <li>Symptom extraction</li>
+                                        <li>Treatment mentions</li>
+                                        <li>Compliance tracking</li>
+                                    </ul>
+                                </div>
+                                
+                                <div class="template-card" onclick="selectTemplate('custom')">
+                                    <div class="template-header">
+                                        <span class="template-icon">🛠️</span>
+                                        <span class="template-badge">Advanced</span>
+                                    </div>
+                                    <h4>Custom Template</h4>
+                                    <p>Create your own analysis parameters</p>
+                                    <ul class="template-features">
+                                        <li>Custom facets</li>
+                                        <li>Custom prompts</li>
+                                        <li>Full control</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            
+                            <div id="template-customization" class="template-custom" style="display:none;">
+                                <!-- Custom template editor -->
+                            </div>
+                        </div>
+                        
+                        <!-- Step 3: Configuration -->
+                        <div class="wizard-panel" data-panel="3">
+                            <h3>Configure Analysis</h3>
+                            
+                            <div class="config-sections">
+                                <!-- Provider Configuration -->
+                                <div class="config-section">
+                                    <h4>Provider Settings</h4>
+                                    
+                                    <div class="form-group">
+                                        <label>Primary Provider</label>
+                                        <select id="primary-provider" class="form-control">
+                                            <option value="openai">OpenAI</option>
+                                            <option value="ollama">Ollama (Local)</option>
+                                            <option value="alternative">Alternative LLM</option>
+                                            <option value="auto">Auto-select</option>
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label>
+                                            <input type="checkbox" id="enable-fallback">
+                                            Enable automatic fallback
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label>Cost Optimization</label>
+                                        <div class="slider-container">
+                                            <input type="range" id="cost-slider" min="0" max="100" value="50">
+                                            <div class="slider-labels">
+                                                <span>Speed</span>
+                                                <span>Cost</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <!-- Analysis Options -->
+                                <div class="config-section">
+                                    <h4>Analysis Options</h4>
+                                    
+                                    <div class="form-group">
+                                        <label>
+                                            <input type="checkbox" id="enable-streaming" checked>
+                                            Stream results progressively
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label>
+                                            <input type="checkbox" id="enable-preprocessing" checked>
+                                            Smart preprocessing
+                                        </label>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label>Batch Size</label>
+                                        <input type="number" id="batch-size" class="form-control" value="50" min="10" max="500">
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label>Language Filter</label>
+                                        <select id="language-filter" class="form-control">
+                                            <option value="">All Languages</option>
+                                            <option value="en">English Only</option>
+                                            <option value="es">Spanish Only</option>
+                                            <option value="fr">French Only</option>
+                                            <option value="auto">Auto-detect</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <!-- Project Assignment -->
+                                <div class="config-section">
+                                    <h4>Project Assignment</h4>
+                                    
+                                    <div class="form-group">
+                                        <label>Add to Project</label>
+                                        <select id="project-select" class="form-control">
+                                            <option value="">None</option>
+                                            <option value="new">+ Create New Project</option>
+                                            <!-- Projects will be loaded dynamically -->
+                                        </select>
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label>Analysis Name</label>
+                                        <input type="text" id="analysis-name" class="form-control" placeholder="e.g., Q4 Support Analysis">
+                                    </div>
+                                    
+                                    <div class="form-group">
+                                        <label>Tags</label>
+                                        <input type="text" id="analysis-tags" class="form-control" placeholder="Enter tags separated by commas">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Step 4: Review -->
+                        <div class="wizard-panel" data-panel="4">
+                            <h3>Review & Start Analysis</h3>
+                            
+                            <div class="review-summary">
+                                <div class="summary-section">
+                                    <h4>Data Summary</h4>
+                                    <div id="data-summary" class="summary-content">
+                                        <!-- Will be populated dynamically -->
+                                    </div>
+                                </div>
+                                
+                                <div class="summary-section">
+                                    <h4>Template & Configuration</h4>
+                                    <div id="config-summary" class="summary-content">
+                                        <!-- Will be populated dynamically -->
+                                    </div>
+                                </div>
+                                
+                                <div class="summary-section">
+                                    <h4>Estimated Processing</h4>
+                                    <div id="processing-estimate" class="summary-content">
+                                        <!-- Will be populated dynamically -->
+                                    </div>
+                                </div>
+                                
+                                <div class="preprocessing-report" id="preprocessing-report" style="display:none;">
+                                    <h4>Data Quality Report</h4>
+                                    <div class="quality-metrics">
+                                        <!-- Will be populated after preprocessing -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Wizard Navigation -->
+                    <div class="wizard-nav">
+                        <button class="btn-secondary" id="wizard-prev" onclick="wizardPrev()" disabled>
+                            Previous
+                        </button>
+                        <button class="btn-primary" id="wizard-next" onclick="wizardNext()">
+                            Next
+                        </button>
+                        <button class="btn-success" id="wizard-start" onclick="startAnalysis()" style="display:none;">
+                            Start Analysis
+                        </button>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Projects Screen -->
+            <section id="projects-screen" class="screen">
+                <header class="screen-header">
+                    <h2>Projects</h2>
+                    <div class="header-actions">
+                        <button class="btn-primary" onclick="createNewProject()">
+                            <span class="icon">➕</span> New Project
+                        </button>
+                    </div>
+                </header>
+                
+                <div class="projects-grid" id="projects-grid">
+                    <!-- Projects will be loaded dynamically -->
+                </div>
+            </section>
+            
+            <!-- Templates Screen -->
+            <section id="templates-screen" class="screen">
+                <header class="screen-header">
+                    <h2>Analysis Templates</h2>
+                    <div class="header-actions">
+                        <button class="btn-primary" onclick="createNewTemplate()">
+                            <span class="icon">➕</span> Create Template
+                        </button>
+                    </div>
+                </header>
+                
+                <div class="templates-manager">
+                    <div class="template-categories">
+                        <button class="category-btn active" data-category="all">All</button>
+                        <button class="category-btn" data-category="general">General</button>
+                        <button class="category-btn" data-category="support">Support</button>
+                        <button class="category-btn" data-category="sales">Sales</button>
+                        <button class="category-btn" data-category="medical">Medical</button>
+                        <button class="category-btn" data-category="custom">Custom</button>
+                    </div>
+                    
+                    <div class="templates-list" id="templates-list">
+                        <!-- Templates will be loaded dynamically -->
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Providers Screen -->
+            <section id="providers-screen" class="screen">
+                <header class="screen-header">
+                    <h2>Provider Management</h2>
+                    <div class="header-actions">
+                        <button class="btn-primary" onclick="addProvider()">
+                            <span class="icon">➕</span> Add Provider
+                        </button>
+                    </div>
+                </header>
+                
+                <div class="providers-dashboard">
+                    <div class="provider-health" id="provider-health">
+                        <!-- Provider health status -->
+                    </div>
+                    
+                    <div class="provider-config" id="provider-config">
+                        <!-- Provider configuration -->
+                    </div>
+                    
+                    <div class="provider-usage" id="provider-usage">
+                        <h3>Usage Statistics</h3>
+                        <canvas id="provider-usage-chart"></canvas>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Settings Screen -->
+            <section id="settings-screen" class="screen">
+                <header class="screen-header">
+                    <h2>Settings</h2>
+                </header>
+                
+                <div class="settings-tabs">
+                    <button class="settings-tab active" data-tab="general">General</button>
+                    <button class="settings-tab" data-tab="appearance">Appearance</button>
+                    <button class="settings-tab" data-tab="advanced">Advanced</button>
+                </div>
+                
+                <div class="settings-content">
+                    <!-- Settings panels will be loaded dynamically -->
+                </div>
+            </section>
+            
+            <!-- Analysis Progress Modal -->
+            <div id="progress-modal" class="modal" style="display:none;">
+                <div class="modal-content large">
+                    <div class="modal-header">
+                        <h2>Analysis in Progress</h2>
+                        <button class="btn-secondary" onclick="pauseAnalysis()">Pause</button>
+                    </div>
+                    
+                    <div class="progress-dashboard">
+                        <div class="progress-main">
+                            <div class="circular-progress" id="circular-progress">
+                                <svg width="200" height="200">
+                                    <circle cx="100" cy="100" r="90" class="progress-bg"></circle>
+                                    <circle cx="100" cy="100" r="90" class="progress-fill"></circle>
+                                </svg>
+                                <div class="progress-text">
+                                    <span class="percentage">0%</span>
+                                    <span class="status">Initializing...</span>
+                                </div>
+                            </div>
+                            
+                            <div class="progress-stats">
+                                <div class="stat">
+                                    <span class="label">Conversations</span>
+                                    <span class="value" id="conv-processed">0 / 0</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="label">Time Elapsed</span>
+                                    <span class="value" id="time-elapsed">00:00</span>
+                                </div>
+                                <div class="stat">
+                                    <span class="label">Est. Remaining</span>
+                                    <span class="value" id="time-remaining">--:--</span>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="progress-stages">
+                            <div class="stage" data-stage="preprocessing">
+                                <span class="stage-icon">🔍</span>
+                                <span class="stage-name">Preprocessing</span>
+                                <span class="stage-status">⏳</span>
+                            </div>
+                            <div class="stage" data-stage="facets">
+                                <span class="stage-icon">🏷️</span>
+                                <span class="stage-name">Facet Extraction</span>
+                                <span class="stage-status">⏳</span>
+                            </div>
+                            <div class="stage" data-stage="embeddings">
+                                <span class="stage-icon">🔢</span>
+                                <span class="stage-name">Embeddings</span>
+                                <span class="stage-status">⏳</span>
+                            </div>
+                            <div class="stage" data-stage="clustering">
+                                <span class="stage-icon">🎯</span>
+                                <span class="stage-name">Clustering</span>
+                                <span class="stage-status">⏳</span>
+                            </div>
+                            <div class="stage" data-stage="insights">
+                                <span class="stage-icon">💡</span>
+                                <span class="stage-name">Insights</span>
+                                <span class="stage-status">⏳</span>
+                            </div>
+                        </div>
+                        
+                        <div class="live-insights" id="live-insights">
+                            <h3>Live Insights</h3>
+                            <div class="insights-feed">
+                                <!-- Live insights will appear here -->
+                            </div>
+                        </div>
+                        
+                        <div class="progress-log">
+                            <h4>Activity Log</h4>
+                            <div id="activity-log" class="log-container">
+                                <!-- Log entries will appear here -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="static/enhanced_app.js"></script>
+</body>
+</html>

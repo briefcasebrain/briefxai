@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenClio - AI Conversation Analysis</title>
+    <link rel="stylesheet" href="static/style.css">
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+</head>
+<body>
+    <div id="app">
+        <!-- Welcome Screen -->
+        <div id="welcome-screen" class="screen active">
+            <div class="welcome-container">
+                <h1>🎯 OpenClio</h1>
+                <p class="subtitle">AI Conversation Analysis & Visualization</p>
+                
+                <div class="quick-start">
+                    <h2>Get Started</h2>
+                    <div class="option-cards">
+                        <div class="card" onclick="showUploadScreen()">
+                            <div class="icon">📁</div>
+                            <h3>Upload Data</h3>
+                            <p>Upload your conversation JSON or Parquet files</p>
+                        </div>
+                        
+                        <div class="card" onclick="useExampleData()">
+                            <div class="icon">🎲</div>
+                            <h3>Use Example Data</h3>
+                            <p>Try with pre-generated sample conversations</p>
+                        </div>
+                        
+                        <div class="card" onclick="pasteData()">
+                            <div class="icon">📋</div>
+                            <h3>Paste JSON</h3>
+                            <p>Paste conversation data directly</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload Screen -->
+        <div id="upload-screen" class="screen">
+            <div class="upload-container">
+                <button class="back-btn" onclick="showWelcomeScreen()">← Back</button>
+                <h2>Upload Conversations</h2>
+                
+                <div class="drop-zone" id="drop-zone">
+                    <div class="drop-content">
+                        <div class="icon">📤</div>
+                        <p>Drag & drop your files here</p>
+                        <p class="small">or</p>
+                        <button class="btn-primary" onclick="document.getElementById('file-input').click()">
+                            Browse Files
+                        </button>
+                        <input type="file" id="file-input" accept=".json,.parquet" multiple hidden>
+                    </div>
+                </div>
+                
+                <div id="file-list" class="file-list"></div>
+                
+                <button id="analyze-btn" class="btn-success" disabled onclick="startAnalysis()">
+                    Start Analysis →
+                </button>
+            </div>
+        </div>
+
+        <!-- Configuration Screen -->
+        <div id="config-screen" class="screen">
+            <div class="config-container">
+                <button class="back-btn" onclick="showUploadScreen()">← Back</button>
+                <h2>Configuration</h2>
+                
+                <div class="config-section">
+                    <h3>LLM Provider</h3>
+                    <select id="llm-provider" onchange="updateLLMOptions()">
+                        <option value="openai" selected>OpenAI</option>
+                        <option value="ollama">Ollama (Local)</option>
+                        <option value="huggingface">HuggingFace</option>
+                        <option value="vllm">vLLM (Local Server)</option>
+                    </select>
+                    
+                    <div id="llm-options">
+                        <label>Model:</label>
+                        <select id="llm-model" class="model-dropdown" onchange="onModelChange()">
+                            <option value="gpt-4o-mini">GPT-4o Mini</option>
+                            <option value="gpt-4o">GPT-4o</option>
+                            <option value="gpt-4-turbo">GPT-4 Turbo</option>
+                            <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+                        </select>
+                        
+                        <div id="api-key-section">
+                            <label>API Key:</label>
+                            <input type="password" id="api-key" placeholder="Your OpenAI API key">
+                        </div>
+                        
+                        <div id="base-url-section" style="display:none;">
+                            <label>Base URL:</label>
+                            <input type="text" id="base-url" placeholder="http://localhost:8000">
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="config-section">
+                    <h3>Embedding Provider</h3>
+                    <select id="embedding-provider" onchange="updateEmbeddingOptions()">
+                        <option value="openai" selected>OpenAI</option>
+                        <option value="sentence-transformers">Sentence Transformers (Local)</option>
+                        <option value="huggingface">HuggingFace</option>
+                        <option value="ollama">Ollama (Local)</option>
+                    </select>
+                    
+                    <label>Model:</label>
+                    <select id="embedding-model" class="model-dropdown">
+                        <option value="text-embedding-3-small">text-embedding-3-small</option>
+                        <option value="text-embedding-3-large">text-embedding-3-large</option>
+                        <option value="text-embedding-ada-002">text-embedding-ada-002</option>
+                    </select>
+                    
+                    <div id="embedding-api-key-section">
+                        <label>API Key (if different from LLM):</label>
+                        <input type="password" id="embedding-api-key" placeholder="Leave blank to use same as LLM">
+                    </div>
+                </div>
+                
+                <div class="config-section">
+                    <h3>Analysis Options</h3>
+                    <label>
+                        <input type="checkbox" id="dedup" checked> Deduplicate conversations
+                    </label>
+                    <label>
+                        <input type="checkbox" id="verbose" checked> Show detailed progress
+                    </label>
+                    
+                    <label>Batch Size:</label>
+                    <input type="number" id="batch-size" value="100" min="1" max="1000">
+                </div>
+                
+                <button class="btn-success" onclick="runAnalysis()">
+                    Run Analysis
+                </button>
+            </div>
+        </div>
+
+        <!-- Progress Screen -->
+        <div id="progress-screen" class="screen">
+            <div class="progress-container">
+                <h2>Analysis in Progress</h2>
+                
+                <!-- Current stage display -->
+                <div class="current-stage-display">
+                    <h3 id="current-stage-title">Initializing...</h3>
+                    <p id="current-stage-detail" class="stage-detail"></p>
+                </div>
+                
+                <div class="progress-steps">
+                    <div class="step" id="step-validation">
+                        <span class="status">⏳</span>
+                        <div class="step-content">
+                            <span class="step-title">Data Validation</span>
+                            <span class="step-detail"></span>
+                        </div>
+                    </div>
+                    <div class="step" id="step-dedup">
+                        <span class="status">⏳</span>
+                        <div class="step-content">
+                            <span class="step-title">Deduplication</span>
+                            <span class="step-detail"></span>
+                        </div>
+                    </div>
+                    <div class="step" id="step-facets">
+                        <span class="status">⏳</span>
+                        <div class="step-content">
+                            <span class="step-title">Facet Extraction</span>
+                            <span class="step-detail"></span>
+                        </div>
+                    </div>
+                    <div class="step" id="step-embeddings">
+                        <span class="status">⏳</span>
+                        <div class="step-content">
+                            <span class="step-title">Embedding Generation</span>
+                            <span class="step-detail"></span>
+                        </div>
+                    </div>
+                    <div class="step" id="step-clustering">
+                        <span class="status">⏳</span>
+                        <div class="step-content">
+                            <span class="step-title">Clustering</span>
+                            <span class="step-detail"></span>
+                        </div>
+                    </div>
+                    <div class="step" id="step-hierarchy">
+                        <span class="status">⏳</span>
+                        <div class="step-content">
+                            <span class="step-title">Hierarchy Building</span>
+                            <span class="step-detail"></span>
+                        </div>
+                    </div>
+                    <div class="step" id="step-umap">
+                        <span class="status">⏳</span>
+                        <div class="step-content">
+                            <span class="step-title">UMAP Visualization</span>
+                            <span class="step-detail"></span>
+                        </div>
+                    </div>
+                    <div class="step" id="step-finalize">
+                        <span class="status">⏳</span>
+                        <div class="step-content">
+                            <span class="step-title">Finalizing</span>
+                            <span class="step-detail"></span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="progress-bar-wrapper">
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <span class="progress-percentage" id="progress-percentage">0%</span>
+                </div>
+                
+                <div class="log-section">
+                    <h4>Detailed Progress Log</h4>
+                    <div id="progress-log" class="log-container"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Screen -->
+        <div id="results-screen" class="screen">
+            <nav class="top-nav">
+                <div class="nav-brand">OpenClio Results</div>
+                <div class="nav-tabs">
+                    <button class="tab active" onclick="showTab('hierarchy')">Hierarchy</button>
+                    <button class="tab" onclick="showTab('umap')">UMAP</button>
+                    <button class="tab" onclick="showTab('conversations')">Conversations</button>
+                    <button class="tab" onclick="showTab('insights')">Insights</button>
+                </div>
+                <button class="btn-secondary" onclick="startNewAnalysis()">New Analysis</button>
+            </nav>
+            
+            <div class="results-content">
+                <div id="hierarchy-tab" class="tab-content active">
+                    <div class="split-view">
+                        <div class="tree-panel">
+                            <h3>Cluster Hierarchy</h3>
+                            <div id="hierarchy-tree"></div>
+                        </div>
+                        <div class="detail-panel">
+                            <h3>Cluster Details</h3>
+                            <div id="cluster-details"></div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="umap-tab" class="tab-content">
+                    <div class="visualization-controls">
+                        <button onclick="resetZoom()">Reset Zoom</button>
+                        <button onclick="toggleLabels()">Toggle Labels</button>
+                        <select id="color-by" onchange="updateColors()">
+                            <option value="cluster">Color by Cluster</option>
+                            <option value="facet">Color by Facet</option>
+                            <option value="concern">Color by Concern Level</option>
+                        </select>
+                    </div>
+                    <div id="umap-plot"></div>
+                    <div id="selection-info"></div>
+                </div>
+                
+                <div id="conversations-tab" class="tab-content">
+                    <div class="conversation-browser">
+                        <div class="filters">
+                            <input type="text" id="search" placeholder="Search conversations...">
+                            <select id="filter-facet">
+                                <option value="">All Facets</option>
+                            </select>
+                            <select id="filter-cluster">
+                                <option value="">All Clusters</option>
+                            </select>
+                        </div>
+                        <div class="conversation-list" id="conversation-list"></div>
+                        <div class="conversation-detail" id="conversation-detail"></div>
+                    </div>
+                </div>
+                
+                <div id="insights-tab" class="tab-content">
+                    <div class="insights-dashboard">
+                        <div class="stat-card">
+                            <h4>Total Conversations</h4>
+                            <div class="stat-value" id="total-conversations">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Unique Clusters</h4>
+                            <div class="stat-value" id="total-clusters">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Languages Detected</h4>
+                            <div class="stat-value" id="languages">0</div>
+                        </div>
+                        <div class="stat-card">
+                            <h4>Concern Distribution</h4>
+                            <canvas id="concern-chart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="export-section">
+                        <h3>Export Results</h3>
+                        <button onclick="exportJSON()">Export as JSON</button>
+                        <button onclick="exportCSV()">Export as CSV</button>
+                        <button onclick="exportReport()">Generate Report</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Paste Data Modal -->
+    <div id="paste-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closePasteModal()">&times;</span>
+            <h2>Paste Conversation Data</h2>
+            <p>Paste your JSON formatted conversations below:</p>
+            <textarea id="paste-area" placeholder='[
+  [
+    {"role": "user", "content": "Hello"},
+    {"role": "assistant", "content": "Hi there!"}
+  ]
+]'></textarea>
+            <button class="btn-primary" onclick="processPastedData()">Process Data</button>
+        </div>
+    </div>
+    
+    <script src="static/app.js"></script>
+</body>
+</html>
