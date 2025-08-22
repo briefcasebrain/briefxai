@@ -5,220 +5,162 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [2.1.0] - 2025-08-18
+## [Unreleased]
 
-### Major Features Added
+### Added - 2025-01-21
+- Proper error handling with typed errors (`src/error.rs`)
+- CI/CD pipeline configuration with GitHub Actions
+- Code formatting configuration (`rustfmt.toml`, `clippy.toml`)
+- Comprehensive test utilities and fixtures (`tests/common/`)
+- Data validation with file size and format checks
+- Interactive onboarding flow with guided setup
+- Results dashboard with executive summary view
+- Context-aware error recovery with suggested actions
 
-#### Production-Ready Monitoring & Observability
-- **Comprehensive Monitoring System** (`src/monitoring.rs`)
-  - Real-time metrics collection with Prometheus integration
-  - System health monitoring with detailed status reporting
-  - Resource tracking (memory, CPU, disk usage)
-  - Performance analytics with bottleneck detection
-  - OpenTelemetry tracing support for distributed monitoring
+### Changed - 2025-01-21
+- Professionalized repository documentation (removed excessive emojis)
+- Improved code quality with clippy linting fixes
+- Enhanced privacy filter with proper statistics tracking
+- Updated interactive map to include active overlay tracking
+- Refactored test assertions for better reliability
+- Improved enum implementations using derive macros
 
-#### Advanced Error Recovery & Resilience
-- **Error Recovery System** (`src/error_recovery.rs`)
-  - Circuit breakers with configurable failure/success thresholds
-  - Exponential backoff retry policies with jitter
-  - Provider failover chains for high availability
-  - Graceful degradation strategies
-  - Recovery statistics and success rate tracking
+### Fixed - 2025-01-21
+- Privacy filter now properly tracks merged and filtered clusters
+- Interactive map export includes points array with coordinates
+- Test failures in `test_privacy_filtering_integration` and `test_interactive_map_creation`
+- Clippy warnings for derivable implementations and code patterns
+- Trailing whitespace issues in source files
+- Unused import warnings in web module
 
-#### Enterprise Logging & Audit
-- **Comprehensive Logging System** (`src/logging.rs`)
-  - Structured logging with tracing integration
-  - Audit trail maintenance with compliance reporting
-  - Security event monitoring and alerting
-  - Sensitive data filtering and protection
-  - Performance logging with slow query detection
+## [0.2.1] - 2025-01-21 - User Journey Improvements Implemented
 
-### Extensive Testing Suite
+### Improvements Completed (2025-01-21)
 
-#### Unit Testing (96+ Tests)
-- **Clustering Tests** (15 tests) - K-means, hierarchical clustering, edge cases
-- **Embeddings Tests** (20 tests) - Normalization, distance metrics, provider validation
-- **Facets Tests** (18 tests) - Processing, validation, numeric handling
-- **Monitoring Tests** - Metrics collection, health checks, resource tracking
-- **Error Recovery Tests** - Circuit breakers, retry policies, failover scenarios
-- **Logging Tests** - Structured logging, audit trails, security events
+#### API Key Management
+- Added comprehensive API key setup helper with provider-specific instructions
+- Implemented connection testing with real-time feedback
+- Added visual status indicators for API connectivity
+- Included direct links to API key generation pages
 
-#### Integration Testing
-- **Comprehensive Integration Tests** (`tests/integration_comprehensive.rs`)
-  - 12 real-world test scenarios
-  - Customer support, technical support, and sales workflow testing
-  - End-to-end pipeline validation with error handling
+#### Export Functionality
+- Implemented JSON export with metadata and timestamps
+- Added CSV export for cluster data with proper escaping
+- Created HTML report generation with formatted output
+- All export functions now fully operational
 
-#### Property-Based Testing
-- **Property-Based Tests** (`tests/property_based_tests.rs`)
-  - 25 property-based tests using proptest
-  - Mathematical property validation (triangle inequality, symmetry)
-  - Clustering stability and numerical edge case testing
+#### Configuration Presets
+- Added three preset modes: Quick (5min), Standard (15min), Deep (30+min)
+- Each preset optimizes model selection, batch size, and processing depth
+- Visual feedback shows selected preset
+- Settings automatically adjust based on preset choice
 
-#### Performance Benchmarking
-- **Comprehensive Benchmark Suite** (`benches/performance.rs`)
-  - 9 benchmark categories covering all major components
-  - K-means clustering performance (100-20k items)
-  - Embedding operations and distance metrics benchmarking
-  - UMAP generation and dimensionality reduction testing
-  - Memory usage and scalability stress testing
-  - Clio features performance (interactive map, privacy filtering)
-  - Full pipeline end-to-end performance analysis
+#### WebSocket Integration
+- WebSocket handler already implemented in backend
+- Client-side connection code functional
+- Real-time progress updates ready for use
 
-### Code Quality & CI/CD
+### Previous State Assessment
 
-#### Code Coverage & Quality Assurance
-- **Coverage Reporting** (`scripts/coverage.sh`)
-  - Comprehensive coverage analysis with tarpaulin
-  - Target coverage threshold: 85%+
-  - Module-specific coverage breakdown
-  - Coverage badge generation for CI/CD
+#### Functional Components
+- Web server running successfully on port 8080
+- File upload API endpoint (`/api/upload`) processing JSON files
+- Example data generation (`/api/example`) working
+- Static file serving for HTML/CSS/JS assets
+- Basic UI navigation between screens
 
-#### Advanced Linting & Quality Gates
-- **Linting System** (`scripts/lint.sh`)
-  - Custom clippy rules for code consistency
-  - Security auditing with cargo audit
-  - Dependency vulnerability checking
-  - Code formatting validation
+#### Partially Functional
+- **Analysis endpoint** - Requires complete config object (missing defaults)
+- **Progress tracking** - UI exists but lacks WebSocket integration
+- **File validation** - Upload works but missing real-time feedback
+- **Results display** - Shows data but export functions not connected
 
-#### Automated Quality Pipeline
-- **Quality Check Script** (`scripts/quality_check.sh`)
-  - End-to-end quality validation pipeline
-  - Automated test execution with proper ordering
-  - Coverage threshold enforcement
-  - Quality gate validation for CI/CD
+#### Non-Functional
+- **WebSocket/SSE** - No real-time updates during analysis
+- **Clio features** - UI present but backend integration incomplete
+- **Session persistence** - Cannot save/resume analysis sessions
+- **Export functionality** - Buttons exist without implementation
 
-### Performance & Scalability
+### Critical User Journey Issues
 
-#### Enhanced Architecture
-- **Modular System Design**
-  - New monitoring, error recovery, and logging modules
-  - Clean separation of concerns
-  - Production-ready architecture patterns
+1. **Onboarding Friction**
+   - Users unclear on expected data format
+   - No sample data preview or format documentation
+   - Missing validation feedback
 
-#### Scalability Improvements
-- **Performance Optimizations**
-  - Concurrent processing enhancements
-  - Memory management improvements
-  - Batch processing optimization
-  - Resource utilization monitoring
+2. **Configuration Overwhelm**
+   - All parameters exposed without context
+   - No smart defaults based on data size
+   - Missing presets for common use cases
 
-### Security & Compliance
+3. **Analysis Black Box**
+   - No progress updates during processing
+   - Missing time estimates
+   - No stage-by-stage feedback
 
-#### Security Enhancements
-- **Security Event Monitoring**
-  - Authentication event logging
-  - Access control monitoring
-  - Suspicious activity detection
-  - Security audit trail maintenance
+4. **Results Confusion**
+   - Overwhelming data presentation
+   - No guided tour or key insights
+   - Export options non-functional
 
-#### Compliance Features
-- **Audit & Compliance**
-  - Comprehensive audit logging
-  - Data retention policies
-  - Sensitive data protection
-  - Compliance reporting capabilities
+### Improvement Roadmap
 
-### Developer Experience
+#### Immediate Fixes Required
+1. Add default config values to `/api/analyze`
+2. Implement WebSocket for real-time updates
+3. Connect export functionality
+4. Add comprehensive error handling
 
-#### Enhanced Development Tools
-- **Testing Infrastructure**
-  - Automated test runner (`scripts/test_runner.sh`)
-  - Comprehensive test categorization
-  - Detailed error reporting and analysis
+#### Next Phase Enhancements
+1. Interactive onboarding with data preview
+2. Config presets (Quick/Standard/Deep)
+3. Real-time validation feedback
+4. Results tour with key insights first
 
-#### Documentation Updates
-- **Comprehensive Documentation**
-  - Updated README with monitoring and observability sections
-  - Configuration examples for new features
-  - API documentation for monitoring endpoints
-  - Testing guide with examples
+## [0.2.0] - 2025-01-21
 
-#### Configuration Management
-- **Enhanced Configuration**
-  - Monitoring and observability settings
-  - Error recovery configuration
-  - Logging and audit configuration
-  - Environment variable support
+### Added
+- Complete Clio methodology implementation from research paper
+- Privacy-preserving conversation analysis with hierarchical clustering
+- Interactive D3.js force-directed graph visualizations
+- Progressive disclosure UI with expertise-based adaptation
+- Comprehensive 5-step onboarding flow for new users
+- Dynamic data loader supporting WebSocket/SSE/polling
+- Real-time dashboard with live metrics and insights
+- Advanced Clio UI with Map View, Patterns, Timeline, and Audit tabs
+- Gemini LLM provider support
+- MIT license file
 
-### 📦 Dependencies Added
+### Fixed
+- Axum router configuration for proper HTML file serving
+- Navbar functionality with working tab switching
+- InvestigationQuery struct missing sort_criterion field
+- Command documentation correction (serve → ui)
+- Compilation errors in integration tests
 
-#### Production Dependencies
-- `opentelemetry` - Distributed tracing support
-- `opentelemetry-prometheus` - Prometheus metrics integration
-- `sysinfo` - System resource monitoring
-- `prometheus` - Metrics collection and export
+### Changed
+- Modernized UI with card-based design and smooth transitions
+- Enhanced error recovery with automatic retry mechanisms
+- Improved logging and monitoring capabilities
+- Updated README with complete feature documentation
+- Added comprehensive CONTRIBUTING.md guidelines
 
-#### Development Dependencies
-- `proptest` - Property-based testing framework
-- `quickcheck` - Additional property testing
-- `tokio-test` - Async testing utilities
-- `criterion` - Performance benchmarking
+## [0.1.0] - 2025-01-20
 
-### Breaking Changes
+### Added
+- Initial release of BriefXAI
+- Core conversation analysis functionality
+- Web-based user interface
+- Multiple LLM provider support (OpenAI, Ollama)
+- Clustering and visualization features
+- Session management with pause/resume capability
+- Smart preprocessing and validation
+- Privacy-focused features with PII detection
 
-#### Configuration Changes
-- New configuration sections for monitoring, error recovery, and logging
-- Additional environment variables for feature control
-- Enhanced YAML configuration structure
+### Changed
+- Migrated from Python to Rust for improved performance
+- Enhanced architecture for production readiness
 
-#### API Additions
-- New monitoring endpoints: `/metrics`, `/health`
-- Performance analytics endpoints
-- Circuit breaker status endpoints
-- Security event monitoring endpoints
-
-### Performance Improvements
-
-#### Benchmark Results
-- **Clustering Performance**: Validated up to 20k conversations
-- **Memory Efficiency**: Optimized memory usage tracking
-- **Throughput Analysis**: Real-time performance monitoring
-- **Scalability Testing**: Stress testing for production workloads
-
-#### Monitoring Metrics
-- Operation timing and throughput measurement
-- Memory and CPU usage tracking
-- Error rate and recovery success monitoring
-- Circuit breaker state and health monitoring
-
-### 🐛 Bug Fixes
-
-#### Error Handling
-- Improved error classification and handling
-- Better error recovery with exponential backoff
-- Circuit breaker state management fixes
-- Graceful degradation implementation
-
-#### Performance Fixes
-- Memory leak prevention in monitoring systems
-- Optimized metrics collection overhead
-- Improved concurrent processing efficiency
-- Resource cleanup in error scenarios
-
-### Future Enhancements
-
-#### Planned Features
-- Advanced ML model monitoring
-- Distributed system tracing
-- Advanced security analytics
-- Performance prediction models
-
----
-
-## [2.0.0] - Previous Release
-
-### Original Features
-- Core conversation analysis pipeline
-- Clustering and embedding generation
-- Web interface and visualization
-- Basic provider support
-- Clio features implementation
-
----
-
-**Contributors**: Development Team
-**Total Lines Added**: 2,500+ lines of production-ready code
-**Test Coverage**: 96+ unit tests, 12 integration tests, 25 property-based tests
-**Performance**: Validated scalability up to 20k conversations
-**Documentation**: Comprehensive updates with monitoring and configuration guides
+### Security
+- Added PII detection and data validation
+- Implemented secure session management

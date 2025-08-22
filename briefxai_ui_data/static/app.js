@@ -26,6 +26,93 @@ function showUploadScreen() {
 function showConfigScreen() {
     showScreen('config');
     initializeConfigDefaults();
+    
+    // Auto-detect and suggest best models based on uploaded data
+    if (uploadedData && uploadedData.length > 0) {
+        // Auto-detect LLM model
+        const llmRecommendation = autoDetectLLMModel(uploadedData);
+        if (llmRecommendation && llmRecommendation.model) {
+            const llmModelSelect = document.getElementById('llm-model');
+            if (llmModelSelect) {
+                const optionExists = Array.from(llmModelSelect.options).some(
+                    option => option.value === llmRecommendation.model
+                );
+                
+                if (optionExists) {
+                    llmModelSelect.value = llmRecommendation.model;
+                    
+                    // Show LLM recommendation
+                    const llmRecommendationDiv = document.createElement('div');
+                    llmRecommendationDiv.id = 'llm-recommendation';
+                    llmRecommendationDiv.style.cssText = `
+                        background: #fff3e0;
+                        border: 1px solid #ff9800;
+                        border-radius: 4px;
+                        padding: 10px;
+                        margin: 10px 0;
+                        color: #e65100;
+                        font-size: 14px;
+                    `;
+                    llmRecommendationDiv.innerHTML = `
+                        <strong>🎯 Auto-detected LLM model:</strong> ${llmRecommendation.model}<br>
+                        <small>${llmRecommendation.reason}</small>
+                    `;
+                    
+                    const existingLLMRecommendation = document.getElementById('llm-recommendation');
+                    if (existingLLMRecommendation) {
+                        existingLLMRecommendation.remove();
+                    }
+                    
+                    const llmSection = llmModelSelect.parentElement;
+                    if (llmSection) {
+                        llmSection.appendChild(llmRecommendationDiv);
+                    }
+                }
+            }
+        }
+        
+        // Auto-detect embedding model
+        const embeddingRecommendation = autoDetectEmbeddingModel(uploadedData);
+        if (embeddingRecommendation && embeddingRecommendation.model) {
+            const modelSelect = document.getElementById('embedding-model');
+            if (modelSelect) {
+                const optionExists = Array.from(modelSelect.options).some(
+                    option => option.value === embeddingRecommendation.model
+                );
+                
+                if (optionExists) {
+                    modelSelect.value = embeddingRecommendation.model;
+                    
+                    // Show embedding recommendation
+                    const recommendationDiv = document.createElement('div');
+                    recommendationDiv.id = 'embedding-recommendation';
+                    recommendationDiv.style.cssText = `
+                        background: #e3f2fd;
+                        border: 1px solid #2196f3;
+                        border-radius: 4px;
+                        padding: 10px;
+                        margin: 10px 0;
+                        color: #1565c0;
+                        font-size: 14px;
+                    `;
+                    recommendationDiv.innerHTML = `
+                        <strong>🎯 Auto-detected embedding model:</strong> ${embeddingRecommendation.model}<br>
+                        <small>${embeddingRecommendation.reason}</small>
+                    `;
+                    
+                    const existingRecommendation = document.getElementById('embedding-recommendation');
+                    if (existingRecommendation) {
+                        existingRecommendation.remove();
+                    }
+                    
+                    const embeddingSection = modelSelect.parentElement;
+                    if (embeddingSection) {
+                        embeddingSection.appendChild(recommendationDiv);
+                    }
+                }
+            }
+        }
+    }
 }
 
 function showProgressScreen() {
@@ -71,6 +158,18 @@ async function handleFiles(files) {
             method: 'POST',
             body: formData
         });
+        
+        if (!response.ok) {
+            const text = await response.text();
+            let errorMessage;
+            try {
+                const errorJson = JSON.parse(text);
+                errorMessage = errorJson.error || errorJson.message || 'Upload failed';
+            } catch {
+                errorMessage = text || `HTTP ${response.status}: Upload failed`;
+            }
+            throw new Error(errorMessage);
+        }
         
         const result = await response.json();
         
@@ -282,12 +381,27 @@ function updateLLMOptions() {
         case 'openai':
             apiKeySection.style.display = 'block';
             baseUrlSection.style.display = 'none';
+            document.getElementById('api-key').placeholder = 'Your OpenAI API key';
             // Add OpenAI models
             addModelOptions(modelSelect, [
                 { value: 'gpt-4o-mini', text: 'GPT-4o Mini (Recommended)' },
                 { value: 'gpt-4o', text: 'GPT-4o' },
                 { value: 'gpt-4-turbo', text: 'GPT-4 Turbo' },
                 { value: 'gpt-3.5-turbo', text: 'GPT-3.5 Turbo' }
+            ]);
+            break;
+            
+        case 'gemini':
+            apiKeySection.style.display = 'block';
+            baseUrlSection.style.display = 'none';
+            document.getElementById('api-key').placeholder = 'Your Google/Gemini API key';
+            // Add Gemini models
+            addModelOptions(modelSelect, [
+                { value: 'gemini-2.0-flash-exp', text: 'Gemini 2.0 Flash (Experimental)' },
+                { value: 'gemini-1.5-flash', text: 'Gemini 1.5 Flash (Recommended)' },
+                { value: 'gemini-1.5-flash-8b', text: 'Gemini 1.5 Flash 8B' },
+                { value: 'gemini-1.5-pro', text: 'Gemini 1.5 Pro' },
+                { value: 'gemini-1.0-pro', text: 'Gemini 1.0 Pro' }
             ]);
             break;
             
@@ -365,6 +479,18 @@ function updateEmbeddingOptions() {
                 { value: 'text-embedding-3-small', text: 'text-embedding-3-small (Recommended)' },
                 { value: 'text-embedding-3-large', text: 'text-embedding-3-large' },
                 { value: 'text-embedding-ada-002', text: 'text-embedding-ada-002' }
+            ]);
+            break;
+            
+        case 'google':
+            apiKeySection.style.display = 'block';
+            addModelOptions(modelSelect, [
+                { value: 'text-embedding-004', text: 'text-embedding-004 (Latest)' },
+                { value: 'text-multilingual-embedding-002', text: 'Multilingual Embedding 002' },
+                { value: 'textembedding-gecko@003', text: 'Gecko 003 (Vertex AI)' },
+                { value: 'textembedding-gecko@002', text: 'Gecko 002 (Vertex AI)' },
+                { value: 'textembedding-gecko@001', text: 'Gecko 001 (Vertex AI)' },
+                { value: 'textembedding-gecko-multilingual@001', text: 'Gecko Multilingual (Vertex AI)' }
             ]);
             break;
             
@@ -714,14 +840,256 @@ function startAnalysis() {
     showConfigScreen();
 }
 
-// WebSocket connection for real-time progress
 let progressWebSocket = null;
 let currentSessionId = null;
+
+function showNotification(title, message, color = '#4caf50') {
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${color};
+        color: white;
+        padding: 15px 20px;
+        border-radius: 4px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+    `;
+    notification.innerHTML = `<strong>${title}</strong><br><small>${message}</small>`;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 3000);
+}
+
+function autoDetectLLMModel(uploadedData) {
+    if (!uploadedData?.length) return null;
+    
+    const stats = {
+        totalLength: 0,
+        maxLength: 0,
+        hasComplex: false,
+        hasCode: false,
+        hasAnalytical: false,
+        hasCasual: false,
+        count: uploadedData.length
+    };
+    
+    const samples = uploadedData.slice(0, Math.min(20, uploadedData.length));
+    
+    const patterns = {
+        code: /```|def |class |function |import |const |let |var |return |if \(|for \(|while \(|\{\s*\n|\}\s*\n/i,
+        analytical: /\b(analyze|analysis|correlation|regression|hypothesis|methodology|framework|architecture|implementation|optimization|algorithm)\b/i,
+        complex: /\b(therefore|consequently|furthermore|nevertheless|moreover|although|whereas|despite|notwithstanding)\b/i,
+        casual: /\b(hey|hi|hello|thanks|okay|sure|yeah|lol|btw|fyi)\b/i
+    };
+    
+    samples.forEach(conv => {
+        const content = `${conv.response} ${conv.prompt || ''}`;
+        stats.totalLength += content.length;
+        stats.maxLength = Math.max(stats.maxLength, content.length);
+        
+        if (patterns.code.test(content)) stats.hasCode = true;
+        if (patterns.analytical.test(content)) stats.hasAnalytical = true;
+        if (patterns.complex.test(content)) stats.hasComplex = true;
+        if (patterns.casual.test(content)) stats.hasCasual = true;
+    });
+    
+    const avgLength = stats.totalLength / samples.length;
+    const provider = document.getElementById('llm-provider').value;
+    
+    const isComplex = (stats.hasAnalytical || stats.hasCode) && stats.hasComplex;
+    const isLarge = stats.count > 100 || avgLength > 2000 || stats.maxLength > 5000;
+    const isSimple = stats.hasCasual && !stats.hasComplex;
+    
+    const models = {
+        openai: {
+            complex: { model: 'gpt-4o', reason: 'Complex content requiring advanced reasoning' },
+            large: { model: 'gpt-4o-mini', reason: 'Large dataset - optimized for efficiency' },
+            code: { model: 'gpt-4o', reason: 'Code analysis requires precision' },
+            simple: { model: 'gpt-3.5-turbo', reason: 'Simple content - cost effective' },
+            default: { model: 'gpt-4o-mini', reason: 'Balanced performance and cost' }
+        },
+        gemini: {
+            complex: { model: 'gemini-1.5-pro', reason: 'Complex analysis with Pro model' },
+            large: { model: 'gemini-1.5-flash', reason: 'Fast processing for large datasets' },
+            code: { model: 'gemini-1.5-pro', reason: 'Code understanding with Pro' },
+            simple: { model: 'gemini-1.5-flash-8b', reason: 'Lightweight model for simple tasks' },
+            default: { model: 'gemini-1.5-flash', reason: 'Optimal speed and quality' }
+        },
+        anthropic: {
+            complex: { model: 'claude-3-opus', reason: 'Sophisticated reasoning required' },
+            large: { model: 'claude-3-haiku', reason: 'Quick processing for volume' },
+            code: { model: 'claude-3-sonnet', reason: 'Code analysis capabilities' },
+            simple: { model: 'claude-3-haiku', reason: 'Efficient for simple tasks' },
+            default: { model: 'claude-3-sonnet', reason: 'Balanced capabilities' }
+        },
+        ollama: {
+            complex: { model: 'llama3.1:70b', reason: 'Large model for complex tasks' },
+            large: { model: 'llama3.2:3b', reason: 'Small model for speed' },
+            code: { model: 'codellama:13b', reason: 'Specialized for code' },
+            simple: { model: 'llama3.2:1b', reason: 'Minimal resource usage' },
+            default: { model: 'llama3.1:8b', reason: 'Medium-sized balanced model' }
+        },
+        huggingface: {
+            default: { model: 'meta-llama/Llama-2-70b-chat-hf', reason: 'Standard HuggingFace model' }
+        },
+        vllm: {
+            default: { model: 'meta-llama/Llama-2-13b-chat-hf', reason: 'vLLM optimized model' }
+        }
+    };
+    
+    const providerModels = models[provider];
+    if (!providerModels) return null;
+    
+    let selection;
+    if (isComplex) selection = providerModels.complex;
+    else if (isLarge) selection = providerModels.large;
+    else if (stats.hasCode) selection = providerModels.code;
+    else if (isSimple) selection = providerModels.simple;
+    else selection = providerModels.default;
+    
+    return selection || providerModels.default;
+}
+
+function applyAutoDetection() {
+    if (!uploadedData || uploadedData.length === 0) {
+        alert('Please upload data first before using auto-detection');
+        return;
+    }
+    
+    const recommendation = autoDetectEmbeddingModel(uploadedData);
+    if (recommendation && recommendation.model) {
+        const modelSelect = document.getElementById('embedding-model');
+        if (modelSelect) {
+            // Check if the recommended model exists in current options
+            const optionExists = Array.from(modelSelect.options).some(
+                option => option.value === recommendation.model
+            );
+            
+            if (optionExists) {
+                modelSelect.value = recommendation.model;
+                
+                showNotification(`✅ Embedding Model Selected: ${recommendation.model}`, recommendation.reason, '#4caf50');
+            } else {
+                alert(`Recommended model "${recommendation.model}" is not available for the current provider. Please update the provider options first.`);
+            }
+        }
+    } else {
+        alert('Could not determine best model. Using default selection.');
+    }
+}
+
+function applyLLMAutoDetection() {
+    if (!uploadedData || uploadedData.length === 0) {
+        alert('Please upload data first before using auto-detection');
+        return;
+    }
+    
+    const recommendation = autoDetectLLMModel(uploadedData);
+    if (recommendation && recommendation.model) {
+        const modelSelect = document.getElementById('llm-model');
+        if (modelSelect) {
+            // Check if the recommended model exists in current options
+            const optionExists = Array.from(modelSelect.options).some(
+                option => option.value === recommendation.model
+            );
+            
+            if (optionExists) {
+                modelSelect.value = recommendation.model;
+                
+                showNotification(`✅ LLM Model Selected: ${recommendation.model}`, recommendation.reason, '#4caf50');
+            } else {
+                alert(`Recommended model "${recommendation.model}" is not available for the current provider. Please update the provider options first.`);
+            }
+        }
+    } else {
+        alert('Could not determine best model. Using default selection.');
+    }
+}
+
+function autoDetectEmbeddingModel(uploadedData) {
+    if (!uploadedData?.length) return null;
+    
+    const stats = {
+        totalLength: 0,
+        hasMultilingual: false,
+        hasTechnical: false,
+        hasCode: false,
+        count: uploadedData.length
+    };
+    
+    const samples = uploadedData.slice(0, Math.min(10, uploadedData.length));
+    const patterns = {
+        multilingual: /[^\u0000-\u007F]/,
+        technical: /\b(algorithm|function|variable|dataset|model|neural|quantum|molecular|statistical)\b/i,
+        code: /```|def |class |function |import |const |let |var |return |if \(|for \(/i
+    };
+    
+    samples.forEach(conv => {
+        const content = `${conv.response} ${conv.prompt || ''}`;
+        stats.totalLength += content.length;
+        
+        if (patterns.multilingual.test(content)) stats.hasMultilingual = true;
+        if (patterns.technical.test(content)) stats.hasTechnical = true;
+        if (patterns.code.test(content)) stats.hasCode = true;
+    });
+    
+    const avgLength = stats.totalLength / samples.length;
+    const provider = document.getElementById('embedding-provider').value;
+    
+    const isLarge = stats.count > 500 || avgLength > 1000;
+    
+    const embeddings = {
+        google: {
+            multilingual: { model: 'text-multilingual-embedding-002', reason: 'Multilingual content detected' },
+            technical: { model: 'text-embedding-004', reason: 'Technical content - latest model' },
+            large: { model: 'text-embedding-004', reason: 'Efficient for large datasets' },
+            default: { model: 'text-embedding-004', reason: 'Latest general-purpose model' }
+        },
+        openai: {
+            multilingual: { model: 'text-embedding-3-large', reason: 'Large model for multilingual' },
+            technical: { model: 'text-embedding-3-large', reason: 'Large model for technical content' },
+            large: { model: 'text-embedding-3-small', reason: 'Efficient small model' },
+            default: { model: 'text-embedding-3-small', reason: 'Recommended general model' }
+        },
+        'sentence-transformers': {
+            technical: { model: 'all-roberta-large-v1', reason: 'High quality for technical' },
+            large: { model: 'all-MiniLM-L6-v2', reason: 'Fast processing' },
+            default: { model: 'all-mpnet-base-v2', reason: 'Balanced performance' }
+        },
+        ollama: {
+            default: { model: 'nomic-embed-text', reason: 'Default Ollama embedding' }
+        },
+        huggingface: {
+            default: { model: 'sentence-transformers/all-mpnet-base-v2', reason: 'Standard HF embedding' }
+        }
+    };
+    
+    const providerEmbeddings = embeddings[provider];
+    if (!providerEmbeddings) return null;
+    
+    let selection;
+    if (stats.hasMultilingual && providerEmbeddings.multilingual) {
+        selection = providerEmbeddings.multilingual;
+    } else if ((stats.hasTechnical || stats.hasCode) && providerEmbeddings.technical) {
+        selection = providerEmbeddings.technical;
+    } else if (isLarge && providerEmbeddings.large) {
+        selection = providerEmbeddings.large;
+    } else {
+        selection = providerEmbeddings.default;
+    }
+    
+    return selection || providerEmbeddings.default;
+}
 
 // Analysis execution
 async function checkOllamaReady(model) {
     try {
         const response = await fetch('/api/ollama-status');
+        if (!response.ok) {
+            return { ready: false, message: 'Could not check Ollama status' };
+        }
         const data = await response.json();
         
         if (data.success && data.data) {
@@ -826,6 +1194,18 @@ async function runAnalysis() {
                 config: config
             })
         });
+        
+        if (!response.ok) {
+            const text = await response.text();
+            let errorMessage;
+            try {
+                const errorJson = JSON.parse(text);
+                errorMessage = errorJson.error || errorJson.message || 'Analysis failed';
+            } catch {
+                errorMessage = text || `HTTP ${response.status}: Analysis failed`;
+            }
+            throw new Error(errorMessage);
+        }
         
         const result = await response.json();
         

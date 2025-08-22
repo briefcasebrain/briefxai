@@ -79,50 +79,46 @@ pub struct BriefXAIConfig {
     pub html_max_size_per_file: usize,
     #[serde(default = "default_website_port")]
     pub website_port: u16,
-    
+
     // Cache settings
     #[serde(default = "default_cache_dir")]
     pub cache_dir: PathBuf,
-    
+
     // Batch size for analysis (not LLM batching)
     #[serde(default = "default_batch_size")]
     pub batch_size: Option<usize>,
-    
+
     // Clio Features Configuration
     #[serde(default = "default_enable_clio_features")]
     pub enable_clio_features: bool,
-    
+
     #[serde(default = "default_clio_privacy_min_cluster_size")]
     pub clio_privacy_min_cluster_size: usize,
-    
+
     #[serde(default = "default_clio_privacy_merge_small")]
     pub clio_privacy_merge_small_clusters: bool,
-    
+
     #[serde(default = "default_clio_privacy_facet_threshold")]
     pub clio_privacy_facet_threshold: f32,
-    
+
     #[serde(default = "default_enable_interactive_map")]
     pub enable_interactive_map: bool,
-    
+
     #[serde(default = "default_enable_investigation")]
     pub enable_investigation: bool,
-    
+
     #[serde(default = "default_enable_discovery")]
     pub enable_discovery: bool,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub enum LlmProvider {
+    #[default]
     OpenAI,
     Ollama,
     VLLM,
     HuggingFace,
-}
-
-impl Default for LlmProvider {
-    fn default() -> Self {
-        LlmProvider::OpenAI
-    }
+    Gemini,
 }
 
 impl LlmProvider {
@@ -132,31 +128,45 @@ impl LlmProvider {
             LlmProvider::Ollama => "ollama",
             LlmProvider::VLLM => "vllm",
             LlmProvider::HuggingFace => "huggingface",
+            LlmProvider::Gemini => "gemini",
         }
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub enum EmbeddingProvider {
+    #[default]
     OpenAI,
     HuggingFace,
     ONNX,
     SentenceTransformers,
-}
-
-impl Default for EmbeddingProvider {
-    fn default() -> Self {
-        EmbeddingProvider::OpenAI
-    }
+    Gemini,
+    Cohere,
+    Voyage,
+    MixedBread,
+    Jina,
+    Nomic,
 }
 
 impl std::fmt::Display for EmbeddingProvider {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
+impl EmbeddingProvider {
+    pub fn as_str(&self) -> &str {
         match self {
-            EmbeddingProvider::OpenAI => write!(f, "OpenAI"),
-            EmbeddingProvider::HuggingFace => write!(f, "HuggingFace"),
-            EmbeddingProvider::ONNX => write!(f, "ONNX"),
-            EmbeddingProvider::SentenceTransformers => write!(f, "SentenceTransformers"),
+            EmbeddingProvider::OpenAI => "OpenAI",
+            EmbeddingProvider::HuggingFace => "HuggingFace",
+            EmbeddingProvider::ONNX => "ONNX",
+            EmbeddingProvider::SentenceTransformers => "SentenceTransformers",
+            EmbeddingProvider::Gemini => "Gemini",
+            EmbeddingProvider::Cohere => "Cohere",
+            EmbeddingProvider::Voyage => "Voyage",
+            EmbeddingProvider::MixedBread => "MixedBread",
+            EmbeddingProvider::Jina => "Jina",
+            EmbeddingProvider::Nomic => "Nomic",
         }
     }
 }
@@ -172,7 +182,8 @@ impl Default for BriefXAIConfig {
             max_conversation_tokens: default_max_conversation_tokens(),
             max_points_to_sample_inside_cluster: default_max_points_to_sample_inside_cluster(),
             max_points_to_sample_outside_cluster: default_max_points_to_sample_outside_cluster(),
-            n_name_description_samples_per_cluster: default_n_name_description_samples_per_cluster(),
+            n_name_description_samples_per_cluster: default_n_name_description_samples_per_cluster(
+            ),
             min_top_level_size: default_min_top_level_size(),
             n_samples_outside_neighborhood: default_n_samples_outside_neighborhood(),
             n_categorize_samples: default_n_categorize_samples(),
@@ -222,28 +233,70 @@ impl BriefXAIConfig {
 }
 
 // Default value functions
-fn default_seed() -> u64 { 27 }
-fn default_verbose() -> bool { true }
-fn default_llm_batch_size() -> usize { 1000 }
-fn default_embed_batch_size() -> usize { 1000 }
-fn default_dedup_data() -> bool { true }
-fn default_max_conversation_tokens() -> usize { 8000 }
-fn default_max_points_to_sample_inside_cluster() -> usize { 10 }
-fn default_max_points_to_sample_outside_cluster() -> usize { 10 }
-fn default_n_name_description_samples_per_cluster() -> usize { 5 }
-fn default_min_top_level_size() -> usize { 5 }
-fn default_n_samples_outside_neighborhood() -> usize { 5 }
-fn default_n_categorize_samples() -> usize { 5 }
-fn default_max_children_for_renaming() -> usize { 10 }
-fn default_n_rename_samples() -> usize { 5 }
-fn default_umap_n_neighbors() -> usize { 15 }
-fn default_umap_min_dist() -> f32 { 0.1 }
-fn default_umap_n_components() -> usize { 2 }
-fn default_kmeans_approximate() -> bool { true }
-fn default_kmeans_verbose() -> bool { true }
-fn default_html_max_size_per_file() -> usize { 10_000_000 }
-fn default_website_port() -> u16 { 8080 }
-fn default_cache_dir() -> PathBuf { 
+fn default_seed() -> u64 {
+    27
+}
+fn default_verbose() -> bool {
+    true
+}
+fn default_llm_batch_size() -> usize {
+    1000
+}
+fn default_embed_batch_size() -> usize {
+    1000
+}
+fn default_dedup_data() -> bool {
+    true
+}
+fn default_max_conversation_tokens() -> usize {
+    8000
+}
+fn default_max_points_to_sample_inside_cluster() -> usize {
+    10
+}
+fn default_max_points_to_sample_outside_cluster() -> usize {
+    10
+}
+fn default_n_name_description_samples_per_cluster() -> usize {
+    5
+}
+fn default_min_top_level_size() -> usize {
+    5
+}
+fn default_n_samples_outside_neighborhood() -> usize {
+    5
+}
+fn default_n_categorize_samples() -> usize {
+    5
+}
+fn default_max_children_for_renaming() -> usize {
+    10
+}
+fn default_n_rename_samples() -> usize {
+    5
+}
+fn default_umap_n_neighbors() -> usize {
+    15
+}
+fn default_umap_min_dist() -> f32 {
+    0.1
+}
+fn default_umap_n_components() -> usize {
+    2
+}
+fn default_kmeans_approximate() -> bool {
+    true
+}
+fn default_kmeans_verbose() -> bool {
+    true
+}
+fn default_html_max_size_per_file() -> usize {
+    10_000_000
+}
+fn default_website_port() -> u16 {
+    8080
+}
+fn default_cache_dir() -> PathBuf {
     dirs::cache_dir()
         .unwrap_or_else(|| PathBuf::from("."))
         .join("briefxai")

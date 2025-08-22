@@ -1,181 +1,138 @@
-# BriefXAI
+# BriefX
 
-[![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=for-the-badge&logo=rust&logoColor=white)](https://www.rust-lang.org/)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-2.1.0-green.svg)](https://github.com/briefcasebrain/briefxai)
-[![Documentation](https://docs.rs/briefxai/badge.svg)](https://docs.rs/briefxai)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=flat&logo=rust&logoColor=white)](https://www.rust-lang.org/)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/briefcasebrain/briefx)
 
-> Advanced AI conversation analysis platform built with Rust for performance and reliability
+A high-performance conversation analysis platform built in Rust, designed for extracting insights from conversations at scale.
 
-BriefXAI is a production-ready platform for analyzing AI conversations at scale, extracting insights, identifying patterns, and visualizing conversation clusters.
+## Overview
+
+BriefX provides enterprise-grade conversation analysis capabilities with a focus on performance, privacy, and usability. It implements advanced clustering algorithms and the Clio methodology for pattern discovery in conversational data.
 
 ## Features
 
-- **Smart Analysis** - Extract facets, sentiments, and patterns from conversations automatically
-- **High Performance** - Process thousands of conversations concurrently with Rust's efficiency
-- **Pause/Resume** - Stop and resume long-running analyses without losing progress
-- **Multi-Provider** - Support for OpenAI, Ollama, and other LLM providers with automatic fallback
-- **Real-time Results** - Stream insights as they're discovered via WebSocket
-- **Data Privacy** - PII detection, local processing options, and data validation
-- **Templates** - Pre-built templates for customer support, sales, medical, and custom use cases
-- **Modern UI** - Professional web interface with guided setup wizard
+### Core Capabilities
+- **Hierarchical Clustering** - Multi-level conversation grouping with pattern discovery
+- **Facet Extraction** - Automatic identification of topics, sentiments, and intents
+- **Privacy Protection** - PII detection and threshold-based anonymization
+- **Real-time Analysis** - Stream processing with WebSocket support
+- **Multi-provider Support** - Compatible with various processing engines
 
-## Quick Start
-
-```bash
-# Install from crates.io (when published)
-cargo install briefxai
-
-# Or build from source
-git clone https://github.com/briefcasebrain/briefxai.git
-cd briefxai
-cargo build --release
-
-# Run the server
-briefxai serve
-
-# Access the UI
-open http://localhost:8080
-```
+### Technical Features
+- Concurrent processing for high throughput
+- Session persistence with pause/resume capability
+- Efficient caching and batch processing
+- REST and WebSocket APIs
+- UMAP dimensionality reduction for visualization
 
 ## Installation
 
-### Requirements
+### Prerequisites
 
 - Rust 1.70 or higher
 - SQLite 3.35 or higher
+- Git 2.0 or higher
 
-### From Source
+### Building from Source
 
 ```bash
-git clone https://github.com/briefcasebrain/briefxai.git
-cd briefxai
+git clone https://github.com/briefcasebrain/briefx.git
+cd briefx
 cargo build --release
-cargo test
-```
-
-### Docker
-
-```bash
-docker build -t briefxai:latest .
-docker run -p 8080:8080 briefxai:latest
 ```
 
 ## Usage
 
-### Basic Example
-
-```rust
-use briefxai::{Config, AnalysisEngine};
-
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Load configuration
-    let config = Config::from_file("config.toml")?;
-    
-    // Initialize engine
-    let engine = AnalysisEngine::new(config).await?;
-    
-    // Analyze conversations
-    let results = engine.analyze_file("conversations.json").await?;
-    
-    // Export results
-    results.export_json("results.json")?;
-    
-    Ok(())
-}
-```
-
-### CLI Usage
+### Starting the Web Interface
 
 ```bash
-# Start web server
-briefxai serve --port 8080
+# Set your API key (required for cloud providers)
+export OPENAI_API_KEY="your-key-here"
 
-# Analyze conversations from file
-briefxai analyze conversations.json --output results.json
-
-# Resume a paused session
-briefxai resume session_123
-
-# Export results
-briefxai export session_123 --format csv
+# Start the server
+./target/release/briefxai ui --port 8080
 ```
 
-## Documentation
+### Command Line Interface
 
-- [Getting Started Guide](docs/getting-started.md)
-- [Architecture Overview](docs/architecture.md)
-- [API Reference](docs/api.md)
-- [Configuration Guide](docs/configuration.md)
-- [Development Guide](docs/development.md)
+```bash
+# Analyze conversations from file
+./target/release/briefxai analyze -i data.json -o results/
+
+# Generate example data
+./target/release/briefxai example -n 100 -o sample_data.json
+
+# Serve existing results
+./target/release/briefxai serve -d results/
+```
 
 ## Configuration
 
-Create a `config.toml` file:
+Create a `config.json` file to customize the analysis:
 
-```toml
-[server]
-host = "127.0.0.1"
-port = 8080
-
-[database]
-path = "briefxai.db"
-
-[providers.openai]
-api_key = "your-api-key"
-model = "gpt-4"
-
-[analysis]
-batch_size = 100
-max_concurrent = 10
+```json
+{
+  "llm_provider": "openai",
+  "llm_model": "gpt-4o-mini",
+  "embedding_provider": "openai",
+  "embedding_model": "text-embedding-3-small",
+  "batch_size": 100,
+  "enable_clio_features": true,
+  "clio_privacy_min_cluster_size": 10
+}
 ```
 
-See [Configuration Guide](docs/configuration.md) for all options.
+## API Documentation
+
+### REST Endpoints
+
+- `POST /api/analyze` - Start analysis session
+- `POST /api/upload` - Upload conversation data
+- `GET /api/status/:session_id` - Check analysis status
+- `GET /api/example` - Generate example data
+
+### WebSocket
+
+Connect to `/ws/progress` for real-time analysis updates.
+
+## Architecture
+
+```
+src/
+├── analysis/           # Core analysis engine
+├── clustering/         # Clustering algorithms
+├── embeddings/         # Embedding generation
+├── llm/               # LLM provider integrations
+├── preprocessing/     # Data validation and cleaning
+├── privacy/           # Privacy protection features
+├── web/              # Web server and API
+└── visualization/    # Data visualization components
+```
 
 ## Development
 
-### Building
+### Running Tests
 
 ```bash
-# Debug build
-cargo build
-
-# Release build
-cargo build --release
-
-# Run tests
 cargo test
-
-# Run benchmarks
-cargo bench
-
-# Generate documentation
-cargo doc --open
 ```
 
-### Testing
+### Code Formatting
 
 ```bash
-# Unit tests
-cargo test
-
-# Integration tests
-cargo test --test '*'
-
-# With coverage
-./scripts/coverage.sh
-
-# Linting
-cargo clippy -- -D warnings
-
-# Format code
 cargo fmt
+```
+
+### Linting
+
+```bash
+cargo clippy -- -D warnings
 ```
 
 ## Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for details.
+Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
 
 ## License
 
@@ -183,12 +140,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## Acknowledgments
 
-- Built with Rust for performance and reliability
-- Uses SQLite for persistent storage
-- Integrates with OpenAI and local LLM providers
-- WebSocket support for real-time updates
+- Based on the Clio methodology from recent research
+- Built with the Rust ecosystem
+- Powered by modern LLM APIs
 
 ## Support
 
-- [Issue Tracker](https://github.com/briefcasebrain/briefxai/issues)
-- [Discussions](https://github.com/briefcasebrain/briefxai/discussions)
+For issues and questions, please use the [GitHub issue tracker](https://github.com/yourusername/briefxai/issues).

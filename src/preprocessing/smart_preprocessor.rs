@@ -1,13 +1,13 @@
 use anyhow::Result;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
-use tracing::info;
 use tiktoken_rs::{cl100k_base, CoreBPE};
+use tracing::info;
 use unicode_normalization::UnicodeNormalization;
 
-use crate::types::{ConversationData, Message};
-use crate::preprocessing::validators::{CompositeValidator, ValidationResult, IssueSeverity};
 use crate::preprocessing::language_detector::{LanguageDetector, LanguageStats};
+use crate::preprocessing::validators::{CompositeValidator, IssueSeverity, ValidationResult};
+use crate::types::{ConversationData, Message};
 
 // ============================================================================
 // Preprocessing Types
@@ -103,13 +103,13 @@ impl Normalizer for UnicodeNormalizer {
                 message
             })
             .collect();
-        
+
         ConversationData {
             messages: normalized_messages,
             metadata: conversation.metadata,
         }
     }
-    
+
     fn name(&self) -> &str {
         "UnicodeNormalizer"
     }
@@ -124,28 +124,29 @@ impl Normalizer for WhitespaceNormalizer {
             .into_iter()
             .map(|mut message| {
                 // Normalize whitespace
-                message.content = message.content
+                message.content = message
+                    .content
                     .lines()
                     .map(|line| line.trim())
                     .filter(|line| !line.is_empty())
                     .collect::<Vec<_>>()
                     .join("\n");
-                
+
                 // Remove multiple consecutive spaces
                 while message.content.contains("  ") {
                     message.content = message.content.replace("  ", " ");
                 }
-                
+
                 message
             })
             .collect();
-        
+
         ConversationData {
             messages: normalized_messages,
             metadata: conversation.metadata,
         }
     }
-    
+
     fn name(&self) -> &str {
         "WhitespaceNormalizer"
     }
@@ -170,12 +171,12 @@ impl EncodingFixer {
             ("â€", "\""),
             ("...", "…"),
         ];
-        
+
         let mut fixed = text.to_string();
         for (pattern, replacement) in &replacements {
             fixed = fixed.replace(pattern, replacement);
         }
-        
+
         fixed
     }
 }
@@ -190,13 +191,13 @@ impl Normalizer for EncodingFixer {
                 message
             })
             .collect();
-        
+
         ConversationData {
             messages: normalized_messages,
             metadata: conversation.metadata,
         }
     }
-    
+
     fn name(&self) -> &str {
         "EncodingFixer"
     }
@@ -215,35 +216,36 @@ impl TokenCounter {
         let encoder = cl100k_base()?;
         Ok(Self { encoder })
     }
-    
+
     pub fn count_tokens(&self, text: &str) -> usize {
         self.encoder.encode_with_special_tokens(text).len()
     }
-    
+
     pub fn count_conversation(&self, conversation: &ConversationData) -> usize {
         conversation
-            .messages.iter()
+            .messages
+            .iter()
             .map(|m| self.count_tokens(&m.content) + self.count_tokens(&m.role) + 4)
             .sum()
     }
-    
+
     pub fn analyze_dataset(&self, conversations: &[ConversationData]) -> TokenStats {
         let mut total_tokens = 0;
         let mut max_tokens = 0;
         let mut min_tokens = usize::MAX;
         let mut conversations_over_limit = Vec::new();
         let mut token_distribution = HashMap::new();
-        
+
         for (i, conversation) in conversations.iter().enumerate() {
             let tokens = self.count_conversation(conversation);
             total_tokens += tokens;
             max_tokens = max_tokens.max(tokens);
             min_tokens = min_tokens.min(tokens);
-            
+
             if tokens > 4000 {
                 conversations_over_limit.push(i);
             }
-            
+
             // Bucket tokens for distribution
             let bucket = match tokens {
                 0..=100 => "0-100",
@@ -253,20 +255,20 @@ impl TokenCounter {
                 2001..=4000 => "2001-4000",
                 _ => "4000+",
             };
-            
+
             *token_distribution.entry(bucket.to_string()).or_insert(0) += 1;
         }
-        
+
         let avg_tokens_per_conversation = if conversations.is_empty() {
             0.0
         } else {
             total_tokens as f32 / conversations.len() as f32
         };
-        
+
         if conversations.is_empty() {
             min_tokens = 0;
         }
-        
+
         TokenStats {
             total_tokens,
             avg_tokens_per_conversation,
@@ -276,20 +278,26 @@ impl TokenCounter {
             token_distribution,
         }
     }
-    
-    pub fn truncate_to_limit(&self, conversation: ConversationData, max_tokens: usize) -> ConversationData {
+
+    pub fn truncate_to_limit(
+        &self,
+        conversation: ConversationData,
+        max_tokens: usize,
+    ) -> ConversationData {
         let mut truncated = Vec::new();
         let mut total_tokens = 0;
-        
+
         for message in &conversation.messages {
-            let message_tokens = self.count_tokens(&message.content) + self.count_tokens(&message.role) + 4;
-            
+            let message_tokens =
+                self.count_tokens(&message.content) + self.count_tokens(&message.role) + 4;
+
             if total_tokens + message_tokens <= max_tokens {
                 truncated.push(message.clone());
                 total_tokens += message_tokens;
             } else if total_tokens < max_tokens {
                 // Partially include this message
-                let remaining_tokens = max_tokens - total_tokens - self.count_tokens(&message.role) - 4;
+                let remaining_tokens =
+                    max_tokens - total_tokens - self.count_tokens(&message.role) - 4;
                 if remaining_tokens > 10 {
                     let truncated_content = self.truncate_text(&message.content, remaining_tokens);
                     truncated.push(Message {
@@ -302,24 +310,26 @@ impl TokenCounter {
                 break;
             }
         }
-        
+
         ConversationData {
             messages: truncated,
             metadata: conversation.metadata,
         }
     }
-    
+
     fn truncate_text(&self, text: &str, max_tokens: usize) -> String {
         let tokens = self.encoder.encode_with_special_tokens(text);
         if tokens.len() <= max_tokens {
             return text.to_string();
         }
-        
+
         let truncated_tokens = &tokens[..max_tokens];
-        self.encoder.decode(truncated_tokens.to_vec()).unwrap_or_else(|_| {
-            // Fallback to character truncation
-            text.chars().take(max_tokens * 4).collect()
-        })
+        self.encoder
+            .decode(truncated_tokens.to_vec())
+            .unwrap_or_else(|_| {
+                // Fallback to character truncation
+                text.chars().take(max_tokens * 4).collect()
+            })
     }
 }
 
@@ -349,68 +359,75 @@ impl SmartPreprocessor {
             options,
         })
     }
-    
+
     pub async fn analyze_data(&self, data: &[ConversationData]) -> DataQualityReport {
         info!("Analyzing {} conversations", data.len());
-        
+
         // Run validators
-        let validation_results = self.validators.aggregate_results(
-            self.validators.validate_all(data)
-        );
-        
+        let validation_results = self
+            .validators
+            .aggregate_results(self.validators.validate_all(data));
+
         // Analyze languages
         let language_stats = self.language_detector.analyze_dataset(data);
-        
+
         // Count tokens
         let token_stats = self.token_counter.analyze_dataset(data);
-        
+
         // Count valid conversations
-        let valid_conversations = data.len() - validation_results.issues
-            .iter()
-            .filter(|i| i.severity == IssueSeverity::Error)
-            .map(|i| i.conversation_index.unwrap_or(0))
-            .collect::<HashSet<_>>()
-            .len();
-        
+        let valid_conversations = data.len()
+            - validation_results
+                .issues
+                .iter()
+                .filter(|i| i.severity == IssueSeverity::Error)
+                .map(|i| i.conversation_index.unwrap_or(0))
+                .collect::<HashSet<_>>()
+                .len();
+
         // Count auto-fixable issues
-        let auto_fixable_issues = validation_results.issues
+        let auto_fixable_issues = validation_results
+            .issues
             .iter()
-            .filter(|i| matches!(i.issue_type, 
-                crate::preprocessing::validators::IssueType::Empty |
-                crate::preprocessing::validators::IssueType::Duplicate |
-                crate::preprocessing::validators::IssueType::EncodingIssue
-            ))
+            .filter(|i| {
+                matches!(
+                    i.issue_type,
+                    crate::preprocessing::validators::IssueType::Empty
+                        | crate::preprocessing::validators::IssueType::Duplicate
+                        | crate::preprocessing::validators::IssueType::EncodingIssue
+                )
+            })
             .count();
-        
+
         // Estimate processing time (rough estimate)
         let estimated_processing_time = (token_stats.total_tokens as f32 / 1000.0) * 0.5;
-        
+
         // Calculate overall quality score
-        let overall_quality_score = validation_results.quality_score * 0.4 +
-            language_stats.confidence * 0.2 +
-            (valid_conversations as f32 / data.len().max(1) as f32) * 0.4;
-        
+        let overall_quality_score = validation_results.quality_score * 0.4
+            + language_stats.confidence * 0.2
+            + (valid_conversations as f32 / data.len().max(1) as f32) * 0.4;
+
         // Generate recommendations
         let mut recommendations = validation_results.suggestions.clone();
-        
+
         if language_stats.languages.len() > 1 {
             recommendations.push(format!(
                 "Dataset contains {} different languages. Consider separating by language for better results.",
                 language_stats.languages.len()
             ));
         }
-        
+
         if token_stats.conversations_over_limit.len() > 10 {
             recommendations.push(format!(
                 "{} conversations exceed token limit. Enable truncation or increase limit.",
                 token_stats.conversations_over_limit.len()
             ));
         }
-        
+
         if overall_quality_score < 0.5 {
-            recommendations.push("Data quality is low. Consider cleaning data before analysis.".to_string());
+            recommendations
+                .push("Data quality is low. Consider cleaning data before analysis.".to_string());
         }
-        
+
         DataQualityReport {
             total_conversations: data.len(),
             valid_conversations,
@@ -423,15 +440,15 @@ impl SmartPreprocessor {
             overall_quality_score,
         }
     }
-    
+
     pub async fn auto_fix(&self, mut data: Vec<ConversationData>) -> Vec<ConversationData> {
         info!("Auto-fixing {} conversations", data.len());
-        
+
         // Remove empty conversations
         if self.options.remove_empty {
             data.retain(|conv| !conv.is_empty());
         }
-        
+
         // Remove duplicates
         if self.options.remove_duplicates {
             let mut seen = HashSet::new();
@@ -440,7 +457,7 @@ impl SmartPreprocessor {
                 seen.insert(hash)
             });
         }
-        
+
         // Apply normalizers
         data = data
             .into_iter()
@@ -454,17 +471,18 @@ impl SmartPreprocessor {
                 normalized
             })
             .collect();
-        
+
         // Truncate long conversations
         if self.options.truncate_long {
             data = data
                 .into_iter()
                 .map(|conv| {
-                    self.token_counter.truncate_to_limit(conv, self.options.max_tokens_per_conversation)
+                    self.token_counter
+                        .truncate_to_limit(conv, self.options.max_tokens_per_conversation)
                 })
                 .collect();
         }
-        
+
         // Filter by language if specified
         if let Some(target_lang) = &self.options.target_language {
             data.retain(|conv| {
@@ -472,21 +490,21 @@ impl SmartPreprocessor {
                 detected.language == *target_lang || detected.confidence < 0.5
             });
         }
-        
+
         // Filter by quality score
         data.retain(|conv| {
             self.calculate_conversation_quality(conv) >= self.options.min_quality_score
         });
-        
+
         info!("Auto-fix complete. {} conversations remaining", data.len());
-        
+
         data
     }
-    
+
     pub async fn suggest_batching(&self, data: &[ConversationData]) -> BatchingStrategy {
         let token_stats = self.token_counter.analyze_dataset(data);
         let language_stats = self.language_detector.analyze_dataset(data);
-        
+
         // Determine best batching method
         let batching_method = if language_stats.languages.len() > 1 {
             BatchingMethod::Language
@@ -495,11 +513,11 @@ impl SmartPreprocessor {
         } else {
             BatchingMethod::FixedSize
         };
-        
+
         // Calculate batch size
         let (batch_size, token_budget) = match batching_method {
             BatchingMethod::TokenBudget => {
-                let budget = 100000;  // Typical LLM context limit
+                let budget = 100000; // Typical LLM context limit
                 let avg_tokens = token_stats.avg_tokens_per_conversation as usize;
                 let size = (budget / avg_tokens.max(1)).min(100);
                 (size, budget)
@@ -513,9 +531,9 @@ impl SmartPreprocessor {
                 (100, 100000)
             }
         };
-        
+
         let estimated_batches = (data.len() + batch_size - 1) / batch_size;
-        
+
         BatchingStrategy {
             batch_size,
             batching_method,
@@ -523,11 +541,11 @@ impl SmartPreprocessor {
             token_budget_per_batch: token_budget,
         }
     }
-    
+
     fn hash_conversation(&self, conversation: &ConversationData) -> u64 {
-        use std::hash::{Hash, Hasher};
         use std::collections::hash_map::DefaultHasher;
-        
+        use std::hash::{Hash, Hasher};
+
         let mut hasher = DefaultHasher::new();
         for message in &conversation.messages {
             message.role.hash(&mut hasher);
@@ -535,7 +553,7 @@ impl SmartPreprocessor {
         }
         hasher.finish()
     }
-    
+
     fn should_apply_normalizer(&self, name: &str) -> bool {
         match name {
             "UnicodeNormalizer" => self.options.normalize_unicode,
@@ -543,47 +561,49 @@ impl SmartPreprocessor {
             _ => true,
         }
     }
-    
+
     fn calculate_conversation_quality(&self, conversation: &ConversationData) -> f32 {
         if conversation.is_empty() {
             return 0.0;
         }
-        
+
         let mut score = 1.0;
-        
+
         // Penalize very short conversations
         if conversation.len() < 2 {
             score *= 0.5;
         }
-        
+
         // Penalize conversations with very short messages
         let avg_message_length: usize = conversation
-            .messages.iter()
+            .messages
+            .iter()
             .map(|m| m.content.len())
-            .sum::<usize>() / conversation.len().max(1);
-        
+            .sum::<usize>()
+            / conversation.len().max(1);
+
         if avg_message_length < 20 {
             score *= 0.7;
         }
-        
+
         // Penalize if no user/assistant messages
         let has_user = conversation.messages.iter().any(|m| m.role == "user");
         let has_assistant = conversation.messages.iter().any(|m| m.role == "assistant");
-        
+
         if !has_user || !has_assistant {
             score *= 0.6;
         }
-        
+
         score
     }
-    
+
     pub fn create_sample_preview(
         &self,
         data: &[ConversationData],
         max_samples: usize,
     ) -> Vec<(usize, ConversationData, String)> {
         let mut samples = Vec::new();
-        
+
         for (i, conversation) in data.iter().enumerate().take(max_samples) {
             let preview = if conversation.len() > 3 {
                 ConversationData {
@@ -593,11 +613,11 @@ impl SmartPreprocessor {
             } else {
                 conversation.clone()
             };
-            
+
             let detected_language = self.language_detector.detect_conversation(conversation);
             let quality = self.calculate_conversation_quality(conversation);
             let tokens = self.token_counter.count_conversation(conversation);
-            
+
             let summary = format!(
                 "Conv #{}: {} messages, {} tokens, {} (conf: {:.1}), quality: {:.1}",
                 i + 1,
@@ -607,10 +627,10 @@ impl SmartPreprocessor {
                 detected_language.confidence,
                 quality
             );
-            
+
             samples.push((i, preview, summary));
         }
-        
+
         samples
     }
 }

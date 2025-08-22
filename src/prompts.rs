@@ -2,7 +2,8 @@ use crate::types::{ConversationData, Facet};
 
 pub fn conversation_to_string(conversation: &ConversationData) -> String {
     conversation
-        .messages.iter()
+        .messages
+        .iter()
         .map(|msg| format!("{}: {}", msg.role, msg.content))
         .collect::<Vec<_>>()
         .join("\n")
@@ -10,7 +11,7 @@ pub fn conversation_to_string(conversation: &ConversationData) -> String {
 
 pub fn get_facet_prompt(conversation: &ConversationData, facet: &Facet) -> String {
     let conv_str = conversation_to_string(conversation);
-    
+
     format!(
         r#"<conversation>
 {}
@@ -19,8 +20,7 @@ pub fn get_facet_prompt(conversation: &ConversationData, facet: &Facet) -> Strin
 {}
 
 Answer:"#,
-        conv_str,
-        facet.question
+        conv_str, facet.question
     )
 }
 
@@ -35,18 +35,20 @@ pub fn get_facet_cluster_name_prompt(
         .map(|(i, ex)| format!("{}: {}", i + 1, ex))
         .collect::<Vec<_>>()
         .join("\n");
-    
+
     let non_cluster_text = non_cluster_examples
         .iter()
         .enumerate()
         .map(|(i, ex)| format!("{}: {}", i + 1, ex))
         .collect::<Vec<_>>()
         .join("\n");
-    
-    let summary_criteria = facet.summary_criteria.as_ref()
+
+    let summary_criteria = facet
+        .summary_criteria
+        .as_ref()
         .map(|s| format!("\n\n{}", s))
         .unwrap_or_default();
-    
+
     format!(
         r#"You are an expert at summarizing groups of related items. Below are examples of "{}" values that form a coherent group, along with some examples that are NOT in this group.
 
@@ -63,10 +65,7 @@ Based on the examples that ARE in this group, provide:
 Format your response as:
 Name: [your cluster name]
 Description: [your description]"#,
-        facet.name,
-        cluster_text,
-        non_cluster_text,
-        summary_criteria
+        facet.name, cluster_text, non_cluster_text, summary_criteria
     )
 }
 
@@ -81,7 +80,7 @@ pub fn get_neighborhood_cluster_names_prompt(
         .map(|(i, (name, desc))| format!("{}: {} - {}", i + 1, name, desc))
         .collect::<Vec<_>>()
         .join("\n");
-    
+
     format!(
         r#"You are organizing clusters of "{}" into higher-level categories. Below are {} existing clusters:
 
@@ -105,16 +104,14 @@ Format your response as a numbered list:
     )
 }
 
-pub fn get_deduplicate_cluster_names_prompt(
-    category_names: &[(String, String)],
-) -> String {
+pub fn get_deduplicate_cluster_names_prompt(category_names: &[(String, String)]) -> String {
     let names_text = category_names
         .iter()
         .enumerate()
         .map(|(i, (name, desc))| format!("{}: {} - {}", i + 1, name, desc))
         .collect::<Vec<_>>()
         .join("\n");
-    
+
     format!(
         r#"Review these category names and descriptions for duplicates or near-duplicates:
 
@@ -142,14 +139,14 @@ pub fn get_assign_to_high_level_cluster_prompt(
         .map(|(i, (name, desc))| format!("{}: {} - {}", i + 1, name, desc))
         .collect::<Vec<_>>()
         .join("\n");
-    
+
     let categories_text = higher_level_categories
         .iter()
         .enumerate()
         .map(|(i, (name, desc))| format!("{}: {} - {}", char::from(b'A' + i as u8), name, desc))
         .collect::<Vec<_>>()
         .join("\n");
-    
+
     format!(
         r#"Assign each cluster to the most appropriate higher-level category.
 
@@ -165,8 +162,7 @@ For each cluster, provide its assignment in the format:
 ...
 
 Every cluster must be assigned to exactly one category."#,
-        clusters_text,
-        categories_text
+        clusters_text, categories_text
     )
 }
 
@@ -180,7 +176,7 @@ pub fn get_renaming_higher_level_cluster_prompt(
         .map(|(name, desc)| format!("- {} : {}", name, desc))
         .collect::<Vec<_>>()
         .join("\n");
-    
+
     format!(
         r#"Review this category and its contents, then provide an improved name and description if needed.
 
@@ -198,9 +194,7 @@ Based on what's actually in this category, provide:
 Format your response as:
 Name: [improved name]
 Description: [improved description]"#,
-        category_name,
-        category_description,
-        children_text
+        category_name, category_description, children_text
     )
 }
 

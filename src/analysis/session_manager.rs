@@ -1,18 +1,18 @@
-use anyhow::{Result, Context, bail};
-use serde::{Serialize, Deserialize};
+use anyhow::{bail, Context, Result};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tokio::sync::{RwLock, broadcast};
-use tracing::{info, debug, warn, error};
 use std::time::{Duration, Instant};
+use tokio::sync::{broadcast, RwLock};
+use tracing::{debug, error, info, warn};
 
-use crate::persistence_v2::{
-    EnhancedPersistenceLayer, AnalysisSession, SessionStatus, BatchStatus, ResultType
-};
-use crate::config::BriefXAIConfig;
-use crate::types::{ConversationData, FacetValue};
-use crate::facets;
-use crate::embeddings;
 use crate::clustering;
+use crate::config::BriefXAIConfig;
+use crate::embeddings;
+use crate::facets;
+use crate::persistence_v2::{
+    AnalysisSession, BatchStatus, EnhancedPersistenceLayer, ResultType, SessionStatus,
+};
+use crate::types::{ConversationData, FacetValue};
 use crate::umap;
 
 // ============================================================================
@@ -21,16 +21,46 @@ use crate::umap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SessionEvent {
-    Started { session_id: String },
-    Paused { session_id: String },
-    Resumed { session_id: String },
-    BatchStarted { session_id: String, batch_number: i32, total_batches: i32 },
-    BatchCompleted { session_id: String, batch_number: i32 },
-    BatchFailed { session_id: String, batch_number: i32, error: String },
-    ProgressUpdate { session_id: String, stage: String, progress: f32, message: String },
-    PartialResultAvailable { session_id: String, result_type: String },
-    Completed { session_id: String },
-    Failed { session_id: String, error: String },
+    Started {
+        session_id: String,
+    },
+    Paused {
+        session_id: String,
+    },
+    Resumed {
+        session_id: String,
+    },
+    BatchStarted {
+        session_id: String,
+        batch_number: i32,
+        total_batches: i32,
+    },
+    BatchCompleted {
+        session_id: String,
+        batch_number: i32,
+    },
+    BatchFailed {
+        session_id: String,
+        batch_number: i32,
+        error: String,
+    },
+    ProgressUpdate {
+        session_id: String,
+        stage: String,
+        progress: f32,
+        message: String,
+    },
+    PartialResultAvailable {
+        session_id: String,
+        result_type: String,
+    },
+    Completed {
+        session_id: String,
+    },
+    Failed {
+        session_id: String,
+        error: String,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -103,14 +133,16 @@ impl AnalysisSessionManager {
         conversations: Vec<ConversationData>,
     ) -> Result<(String, broadcast::Receiver<SessionEvent>)> {
         // Create new session
-        let session = self.inner.persistence
+        let session = self
+            .inner
+            .persistence
             .session_manager()
             .create_session(config.clone())
             .await?;
-        
+
         let session_id = session.id.clone();
         let (event_sender, event_receiver) = broadcast::channel(1000);
-        
+
         // Create session state
         let state = SessionState {
             session: session.clone(),
@@ -120,15 +152,19 @@ impl AnalysisSessionManager {
             start_time: Instant::now(),
             pause_duration: Duration::from_secs(0),
         };
-        
+
         // Store in active sessions
-        self.inner.active_sessions.write().await.insert(session_id.clone(), state.clone());
-        
+        self.inner
+            .active_sessions
+            .write()
+            .await
+            .insert(session_id.clone(), state.clone());
+
         // Send start event
-        let _ = event_sender.send(SessionEvent::Started { 
-            session_id: session_id.clone() 
+        let _ = event_sender.send(SessionEvent::Started {
+            session_id: session_id.clone(),
         });
-        
+
         // Start analysis in background
         let inner = self.inner();
         let session_id_clone = session_id.clone();
@@ -138,49 +174,69 @@ impl AnalysisSessionManager {
                 session_id_clone.clone(),
                 config,
                 conversations,
-            ).await {
+            )
+            .await
+            {
                 error!("Analysis failed for session {}: {}", session_id_clone, e);
-                let _ = AnalysisSessionManager::mark_session_failed_static(&inner, &session_id_clone, &e.to_string()).await;
+                let _ = AnalysisSessionManager::mark_session_failed_static(
+                    &inner,
+                    &session_id_clone,
+                    &e.to_string(),
+                )
+                .await;
             }
         });
-        
+
         Ok((session_id, event_receiver))
     }
 
     pub async fn pause_analysis(&self, session_id: &str) -> Result<()> {
         let sessions = self.inner.active_sessions.read().await;
-        let state = sessions.get(session_id)
+        let state = sessions
+            .get(session_id)
             .context("Session not found or not active")?;
-        
+
         *state.is_paused.write().await = true;
-        
-        self.inner.persistence
+
+        self.inner
+            .persistence
             .session_manager()
             .pause_session(session_id)
             .await?;
-        
+
         let _ = state.event_sender.send(SessionEvent::Paused {
             session_id: session_id.to_string(),
         });
-        
+
         info!("Session {} paused", session_id);
         Ok(())
     }
 
-    pub async fn resume_analysis(&self, session_id: &str) -> Result<broadcast::Receiver<SessionEvent>> {
+    pub async fn resume_analysis(
+        &self,
+        session_id: &str,
+    ) -> Result<broadcast::Receiver<SessionEvent>> {
         // Get session from persistence
-        let session = self.inner.persistence
+        let session = self
+            .inner
+            .persistence
             .session_manager()
             .resume_session(session_id)
             .await?;
-        
+
         // Check if already active
-        if self.inner.active_sessions.read().await.contains_key(session_id) {
+        if self
+            .inner
+            .active_sessions
+            .read()
+            .await
+            .contains_key(session_id)
+        {
             bail!("Session is already active");
         }
-        
+
         let (event_sender, event_receiver) = broadcast::channel(1000);
-        
+
         // Create session state
         let state = SessionState {
             session: session.clone(),
@@ -190,38 +246,43 @@ impl AnalysisSessionManager {
             start_time: Instant::now(),
             pause_duration: Duration::from_secs(0),
         };
-        
+
         // Store in active sessions
-        self.inner.active_sessions.write().await.insert(session_id.to_string(), state);
-        
+        self.inner
+            .active_sessions
+            .write()
+            .await
+            .insert(session_id.to_string(), state);
+
         // Send resume event
         let _ = event_sender.send(SessionEvent::Resumed {
             session_id: session_id.to_string(),
         });
-        
+
         info!("Session {} resumed", session_id);
-        
+
         // Resume analysis in background
-        let inner = self.inner();
-        let session_id_clone = session_id.to_string();
-        let config = session.config.clone();
-        
+        let _inner = self.inner();
+        let _session_id_clone = session_id.to_string();
+        let _config = session.config.clone();
+
         tokio::spawn(async move {
             // Reload conversations from persistence
             // For now, we'll need to handle this differently
             warn!("Resume functionality needs conversation reload implementation");
         });
-        
+
         Ok(event_receiver)
     }
 
     pub async fn stop_analysis(&self, session_id: &str) -> Result<()> {
         let sessions = self.inner.active_sessions.read().await;
-        let state = sessions.get(session_id)
+        let state = sessions
+            .get(session_id)
             .context("Session not found or not active")?;
-        
+
         *state.should_stop.write().await = true;
-        
+
         info!("Stopping session {}", session_id);
         Ok(())
     }
@@ -230,7 +291,8 @@ impl AnalysisSessionManager {
         if let Some(state) = self.inner.active_sessions.read().await.get(session_id) {
             Ok(state.session.status.clone())
         } else {
-            self.inner.persistence
+            self.inner
+                .persistence
                 .session_manager()
                 .get_session(session_id)
                 .await?
@@ -256,24 +318,31 @@ impl AnalysisSessionManager {
         config: BriefXAIConfig,
         conversations: Vec<ConversationData>,
     ) -> Result<()> {
-        let state = inner.active_sessions.read().await
+        let state = inner
+            .active_sessions
+            .read()
+            .await
             .get(&session_id)
             .cloned()
             .context("Session state not found")?;
-        
+
         // Update session with total conversations
-        inner.persistence
+        inner
+            .persistence
             .session_manager()
             .update_session_status(&session_id, SessionStatus::Running)
             .await?;
-        
+
         // Create batches
         let batch_size = config.batch_size.unwrap_or(100);
         let batches = Batch::create_batches(&conversations, batch_size);
         let total_batches = batches.len() as i32;
-        
-        info!("Starting analysis for session {} with {} batches", session_id, total_batches);
-        
+
+        info!(
+            "Starting analysis for session {} with {} batches",
+            session_id, total_batches
+        );
+
         // Process each batch
         for batch in batches {
             // Check if should stop
@@ -281,7 +350,7 @@ impl AnalysisSessionManager {
                 info!("Session {} stopped by user", session_id);
                 break;
             }
-            
+
             // Check if paused
             while *state.is_paused.read().await {
                 tokio::time::sleep(Duration::from_millis(100)).await;
@@ -289,19 +358,20 @@ impl AnalysisSessionManager {
                     break;
                 }
             }
-            
+
             // Send batch started event
             let _ = state.event_sender.send(SessionEvent::BatchStarted {
                 session_id: session_id.clone(),
                 batch_number: batch.number,
                 total_batches,
             });
-            
+
             // Process batch
             match Self::process_batch_static(&inner, &session_id, &config, &batch, &state).await {
                 Ok(()) => {
                     // Save batch progress
-                    inner.persistence
+                    inner
+                        .persistence
                         .session_manager()
                         .save_batch_progress(
                             &session_id,
@@ -311,7 +381,7 @@ impl AnalysisSessionManager {
                             None,
                         )
                         .await?;
-                    
+
                     // Send batch completed event
                     let _ = state.event_sender.send(SessionEvent::BatchCompleted {
                         session_id: session_id.clone(),
@@ -319,10 +389,14 @@ impl AnalysisSessionManager {
                     });
                 }
                 Err(e) => {
-                    error!("Batch {} failed for session {}: {}", batch.number, session_id, e);
-                    
+                    error!(
+                        "Batch {} failed for session {}: {}",
+                        batch.number, session_id, e
+                    );
+
                     // Save batch failure
-                    inner.persistence
+                    inner
+                        .persistence
                         .session_manager()
                         .save_batch_progress(
                             &session_id,
@@ -332,36 +406,37 @@ impl AnalysisSessionManager {
                             Some(e.to_string()),
                         )
                         .await?;
-                    
+
                     // Send batch failed event
                     let _ = state.event_sender.send(SessionEvent::BatchFailed {
                         session_id: session_id.clone(),
                         batch_number: batch.number,
                         error: e.to_string(),
                     });
-                    
+
                     // Continue with next batch (could make this configurable)
                 }
             }
         }
-        
+
         // Finalize analysis
         Self::finalize_analysis_static(&inner, &session_id, &config, &state).await?;
-        
+
         // Mark session as completed
-        inner.persistence
+        inner
+            .persistence
             .session_manager()
             .update_session_status(&session_id, SessionStatus::Completed)
             .await?;
-        
+
         // Send completed event
         let _ = state.event_sender.send(SessionEvent::Completed {
             session_id: session_id.clone(),
         });
-        
+
         // Remove from active sessions
         inner.active_sessions.write().await.remove(&session_id);
-        
+
         info!("Analysis completed for session {}", session_id);
         Ok(())
     }
@@ -373,8 +448,11 @@ impl AnalysisSessionManager {
         batch: &Batch,
         state: &SessionState,
     ) -> Result<()> {
-        debug!("Processing batch {} for session {}", batch.number, session_id);
-        
+        debug!(
+            "Processing batch {} for session {}",
+            batch.number, session_id
+        );
+
         // Extract facets
         let _ = state.event_sender.send(SessionEvent::ProgressUpdate {
             session_id: session_id.to_string(),
@@ -382,11 +460,12 @@ impl AnalysisSessionManager {
             progress: 0.0,
             message: format!("Extracting facets for batch {}", batch.number),
         });
-        
+
         let facets = facets::extract_facets(config, &batch.conversations).await?;
-        
+
         // Store partial facet results
-        inner.persistence
+        inner
+            .persistence
             .store_partial_result(
                 session_id,
                 Some(batch.number),
@@ -394,7 +473,7 @@ impl AnalysisSessionManager {
                 serde_json::to_value(&facets)?,
             )
             .await?;
-        
+
         // Generate embeddings
         let _ = state.event_sender.send(SessionEvent::ProgressUpdate {
             session_id: session_id.to_string(),
@@ -402,11 +481,12 @@ impl AnalysisSessionManager {
             progress: 0.33,
             message: format!("Generating embeddings for batch {}", batch.number),
         });
-        
+
         let embeddings = embeddings::generate_embeddings(config, &batch.conversations).await?;
-        
+
         // Store partial embedding results
-        inner.persistence
+        inner
+            .persistence
             .store_partial_result(
                 session_id,
                 Some(batch.number),
@@ -414,13 +494,15 @@ impl AnalysisSessionManager {
                 serde_json::to_value(&embeddings)?,
             )
             .await?;
-        
+
         // Notify partial results available
-        let _ = state.event_sender.send(SessionEvent::PartialResultAvailable {
-            session_id: session_id.to_string(),
-            result_type: "batch".to_string(),
-        });
-        
+        let _ = state
+            .event_sender
+            .send(SessionEvent::PartialResultAvailable {
+                session_id: session_id.to_string(),
+                result_type: "batch".to_string(),
+            });
+
         Ok(())
     }
 
@@ -431,30 +513,32 @@ impl AnalysisSessionManager {
         state: &SessionState,
     ) -> Result<()> {
         info!("Finalizing analysis for session {}", session_id);
-        
+
         // Load all partial results
-        let facet_results = inner.persistence
+        let facet_results = inner
+            .persistence
             .get_partial_results(session_id, Some(ResultType::Facet))
             .await?;
-        
-        let embedding_results = inner.persistence
+
+        let embedding_results = inner
+            .persistence
             .get_partial_results(session_id, Some(ResultType::Embedding))
             .await?;
-        
+
         // Combine all facets
         let mut all_facets = Vec::new();
         for result in facet_results {
             let facets: Vec<Vec<FacetValue>> = serde_json::from_value(result.data)?;
             all_facets.extend(facets);
         }
-        
+
         // Combine all embeddings
         let mut all_embeddings = Vec::new();
         for result in embedding_results {
             let embeddings: Vec<Vec<f32>> = serde_json::from_value(result.data)?;
             all_embeddings.extend(embeddings);
         }
-        
+
         // Perform clustering
         let _ = state.event_sender.send(SessionEvent::ProgressUpdate {
             session_id: session_id.to_string(),
@@ -462,17 +546,15 @@ impl AnalysisSessionManager {
             progress: 0.7,
             message: "Performing clustering analysis".to_string(),
         });
-        
-        let base_clusters = clustering::create_base_clusters(
-            config,
-            &all_embeddings,
-            &all_facets,
-        ).await?;
-        
+
+        let base_clusters =
+            clustering::create_base_clusters(config, &all_embeddings, &all_facets).await?;
+
         let hierarchy = clustering::build_hierarchy(config, base_clusters).await?;
-        
+
         // Store clustering results
-        inner.persistence
+        inner
+            .persistence
             .store_partial_result(
                 session_id,
                 None,
@@ -480,7 +562,7 @@ impl AnalysisSessionManager {
                 serde_json::to_value(&hierarchy)?,
             )
             .await?;
-        
+
         // Generate UMAP visualization
         let _ = state.event_sender.send(SessionEvent::ProgressUpdate {
             session_id: session_id.to_string(),
@@ -488,9 +570,9 @@ impl AnalysisSessionManager {
             progress: 0.9,
             message: "Generating visualizations".to_string(),
         });
-        
+
         let umap_coords = umap::generate_umap(config, &all_embeddings).await?;
-        
+
         // Store final results
         let final_results = serde_json::json!({
             "clusters": hierarchy,
@@ -498,37 +580,38 @@ impl AnalysisSessionManager {
             "umap_coords": umap_coords,
             "total_conversations": all_facets.len(),
         });
-        
+
         // Update session with results
         // Note: This would need to be implemented through the persistence layer
         // For now, we'll store as partial result
-        inner.persistence
-            .store_partial_result(
-                session_id,
-                None,
-                ResultType::Insight,
-                final_results,
-            )
+        inner
+            .persistence
+            .store_partial_result(session_id, None, ResultType::Insight, final_results)
             .await?;
-        
+
         Ok(())
     }
 
-    async fn mark_session_failed_static(inner: &Arc<AnalysisSessionManagerInner>, session_id: &str, error: &str) -> Result<()> {
-        inner.persistence
+    async fn mark_session_failed_static(
+        inner: &Arc<AnalysisSessionManagerInner>,
+        session_id: &str,
+        error: &str,
+    ) -> Result<()> {
+        inner
+            .persistence
             .session_manager()
             .update_session_status(session_id, SessionStatus::Failed)
             .await?;
-        
+
         if let Some(state) = inner.active_sessions.read().await.get(session_id) {
             let _ = state.event_sender.send(SessionEvent::Failed {
                 session_id: session_id.to_string(),
                 error: error.to_string(),
             });
         }
-        
+
         inner.active_sessions.write().await.remove(session_id);
-        
+
         Ok(())
     }
 
@@ -562,7 +645,7 @@ impl ProgressTracker {
     pub async fn update(&self, stage: &str, progress: f32, message: &str) {
         *self.current_stage.write().await = stage.to_string();
         *self.current_progress.write().await = progress;
-        
+
         let _ = self.event_sender.send(SessionEvent::ProgressUpdate {
             session_id: self.session_id.clone(),
             stage: stage.to_string(),
@@ -583,6 +666,7 @@ impl ProgressTracker {
 // ============================================================================
 
 pub struct EstimationService {
+    #[allow(dead_code)]
     persistence: Arc<EnhancedPersistenceLayer>,
 }
 
@@ -591,7 +675,11 @@ impl EstimationService {
         Self { persistence }
     }
 
-    pub async fn estimate_time(&self, num_conversations: usize, config: &BriefXAIConfig) -> Duration {
+    pub async fn estimate_time(
+        &self,
+        num_conversations: usize,
+        config: &BriefXAIConfig,
+    ) -> Duration {
         // Based on historical data, estimate processing time
         // For now, use rough estimates
         let per_conversation_ms = match config.llm_provider.as_str() {
@@ -600,20 +688,21 @@ impl EstimationService {
             "vllm" => 300,
             _ => 750,
         };
-        
+
         Duration::from_millis((num_conversations * per_conversation_ms) as u64)
     }
 
     pub async fn estimate_cost(&self, num_conversations: usize, config: &BriefXAIConfig) -> f64 {
         // Based on provider and model, estimate cost
         // This would need actual token counting and pricing data
-        let per_conversation_cost = match (config.llm_provider.as_str(), config.llm_model.as_str()) {
+        let per_conversation_cost = match (config.llm_provider.as_str(), config.llm_model.as_str())
+        {
             ("openai", "gpt-4o") => 0.01,
             ("openai", "gpt-4o-mini") => 0.002,
             ("openai", "gpt-3.5-turbo") => 0.001,
             _ => 0.0,
         };
-        
+
         num_conversations as f64 * per_conversation_cost
     }
 }

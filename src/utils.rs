@@ -1,26 +1,26 @@
-use anyhow::{Result, Context, bail};
+use anyhow::{bail, Context, Result};
 use std::collections::{HashMap, HashSet};
 use std::hash::Hash;
 use std::time::Duration;
 use tokio::time::sleep;
-use tracing::{info, warn, debug, error};
+use tracing::{debug, error, info, warn};
 
-use crate::types::ConversationData;
 use crate::prompts::conversation_to_string;
+use crate::types::ConversationData;
 
 pub fn dedup_data(data: Vec<ConversationData>) -> Result<Vec<ConversationData>> {
     info!("Deduplicating {} conversations", data.len());
-    
+
     let mut seen = HashSet::new();
     let mut deduped = Vec::new();
-    
+
     for conversation in data {
         let key = conversation_to_string(&conversation);
         if seen.insert(key) {
             deduped.push(conversation);
         }
     }
-    
+
     info!("Deduplicated to {} unique conversations", deduped.len());
     Ok(deduped)
 }
@@ -32,14 +32,14 @@ where
 {
     let mut seen = HashSet::new();
     let mut result = Vec::new();
-    
+
     for item in items {
         let key = key_fn(&item);
         if seen.insert(key) {
             result.push(item);
         }
     }
-    
+
     result
 }
 
@@ -50,34 +50,34 @@ pub fn flatten<T>(nested: Vec<Vec<T>>) -> Vec<T> {
 pub fn unflatten<T: Clone>(flat: Vec<T>, sizes: Vec<usize>) -> Vec<Vec<T>> {
     let mut result = Vec::new();
     let mut offset = 0;
-    
+
     for size in sizes {
         let chunk = flat[offset..offset + size].to_vec();
         result.push(chunk);
         offset += size;
     }
-    
+
     result
 }
 
-
 pub fn sample_items<T: Clone>(items: &[T], n: usize, seed: Option<u64>) -> Vec<T> {
     use rand::{seq::SliceRandom, SeedableRng};
-    
+
     if items.len() <= n {
         return items.to_vec();
     }
-    
+
     let mut rng = if let Some(seed) = seed {
         rand::rngs::StdRng::seed_from_u64(seed)
     } else {
         rand::rngs::StdRng::from_entropy()
     };
-    
+
     let mut indices: Vec<usize> = (0..items.len()).collect();
     indices.shuffle(&mut rng);
-    
-    indices.into_iter()
+
+    indices
+        .into_iter()
         .take(n)
         .map(|i| items[i].clone())
         .collect()
@@ -87,13 +87,14 @@ pub fn most_common<T: Eq + Hash + Clone>(items: Vec<T>) -> Option<T> {
     if items.is_empty() {
         return None;
     }
-    
+
     let mut counts = HashMap::new();
     for item in items {
         *counts.entry(item).or_insert(0) += 1;
     }
-    
-    counts.into_iter()
+
+    counts
+        .into_iter()
         .max_by_key(|(_, count)| *count)
         .map(|(item, _)| item)
 }
@@ -102,24 +103,24 @@ pub fn chunk_data<T: Clone>(data: Vec<T>, max_size: usize) -> Vec<Vec<T>> {
     let mut chunks = Vec::new();
     let mut current_chunk = Vec::new();
     let mut current_size = 0;
-    
+
     for item in data {
         let item_size = std::mem::size_of_val(&item);
-        
+
         if current_size + item_size > max_size && !current_chunk.is_empty() {
             chunks.push(current_chunk);
             current_chunk = Vec::new();
             current_size = 0;
         }
-        
+
         current_chunk.push(item);
         current_size += item_size;
     }
-    
+
     if !current_chunk.is_empty() {
         chunks.push(current_chunk);
     }
-    
+
     chunks
 }
 
@@ -129,28 +130,28 @@ pub fn truncate_conversation(
 ) -> ConversationData {
     // Simple token estimation: ~4 characters per token
     let estimate_tokens = |s: &str| s.len() / 4;
-    
+
     let mut truncated = Vec::new();
     let mut total_tokens = 0;
-    
+
     for message in conversation.messages.iter().rev() {
         let message_tokens = estimate_tokens(&message.content);
-        
+
         if total_tokens + message_tokens > max_tokens {
             break;
         }
-        
+
         truncated.push(message.clone());
         total_tokens += message_tokens;
     }
-    
+
     truncated.reverse();
-    
+
     // Ensure we end with an assistant message if possible
     if !truncated.is_empty() && truncated.last().unwrap().role == "user" {
         truncated.pop();
     }
-    
+
     ConversationData {
         messages: truncated,
         metadata: conversation.metadata.clone(),
@@ -191,11 +192,14 @@ where
 {
     let mut attempt = 0;
     let mut delay = config.initial_delay;
-    
+
     loop {
         attempt += 1;
-        debug!("Attempting {} (attempt {}/{})", operation_name, attempt, config.max_attempts);
-        
+        debug!(
+            "Attempting {} (attempt {}/{})",
+            operation_name, attempt, config.max_attempts
+        );
+
         match operation().await {
             Ok(result) => {
                 if attempt > 1 {
@@ -204,20 +208,29 @@ where
                 return Ok(result);
             }
             Err(e) if attempt >= config.max_attempts => {
-                error!("{} failed after {} attempts: {}", operation_name, attempt, e);
-                return Err(e).context(format!("{} failed after {} attempts", operation_name, config.max_attempts));
+                error!(
+                    "{} failed after {} attempts: {}",
+                    operation_name, attempt, e
+                );
+                return Err(e).context(format!(
+                    "{} failed after {} attempts",
+                    operation_name, config.max_attempts
+                ));
             }
             Err(e) => {
-                warn!("{} attempt {} failed: {}, retrying in {:?}", 
-                      operation_name, attempt, e, delay);
-                
+                warn!(
+                    "{} attempt {} failed: {}, retrying in {:?}",
+                    operation_name, attempt, e, delay
+                );
+
                 sleep(delay).await;
-                
+
                 // Calculate next delay with exponential backoff
                 delay = Duration::from_secs_f64(
-                    (delay.as_secs_f64() * config.exponential_base).min(config.max_delay.as_secs_f64())
+                    (delay.as_secs_f64() * config.exponential_base)
+                        .min(config.max_delay.as_secs_f64()),
                 );
-                
+
                 // Add jitter if configured
                 if config.jitter {
                     use rand::Rng;
@@ -251,7 +264,7 @@ where
         Ok(result) => Ok(Some(result)),
         Err(e) => {
             error!("Error in {}: {}", context, e);
-            
+
             match strategy {
                 RecoveryStrategy::Retry(config) => {
                     match retry_with_backoff(operation, config, context).await {
@@ -293,10 +306,10 @@ where
     Fut: std::future::Future<Output = Result<R>> + Send,
 {
     use futures_util::future::join_all;
-    
+
     let mut all_results = Vec::new();
     let mut errors = Vec::new();
-    
+
     for chunk in items.chunks(batch_size) {
         let futures: Vec<_> = chunk
             .iter()
@@ -306,9 +319,9 @@ where
                 async move { processor(item).await }
             })
             .collect();
-        
+
         let results = join_all(futures).await;
-        
+
         for (i, result) in results.into_iter().enumerate() {
             match result {
                 Ok(r) => all_results.push(r),
@@ -316,7 +329,7 @@ where
                     let error_msg = format!("Error processing item {}: {}", i, e);
                     error!("{}", error_msg);
                     errors.push(error_msg);
-                    
+
                     if !continue_on_error {
                         bail!("Batch processing failed: {}", errors.join("; "));
                     }
@@ -324,15 +337,19 @@ where
             }
         }
     }
-    
+
     if !errors.is_empty() && !continue_on_error {
-        bail!("Batch processing had {} errors: {}", errors.len(), errors.join("; "));
+        bail!(
+            "Batch processing had {} errors: {}",
+            errors.len(),
+            errors.join("; ")
+        );
     }
-    
+
     if !errors.is_empty() {
         warn!("Batch processing completed with {} errors", errors.len());
     }
-    
+
     Ok(all_results)
 }
 
@@ -353,7 +370,7 @@ impl CircuitBreaker {
             last_failure_time: std::sync::Arc::new(tokio::sync::RwLock::new(None)),
         }
     }
-    
+
     pub async fn call<F, Fut, T>(&self, operation: F) -> Result<T>
     where
         F: FnOnce() -> Fut,
@@ -363,7 +380,7 @@ impl CircuitBreaker {
         if self.is_open().await {
             bail!("Circuit breaker is open - too many failures");
         }
-        
+
         match operation().await {
             Ok(result) => {
                 self.on_success().await;
@@ -375,16 +392,19 @@ impl CircuitBreaker {
             }
         }
     }
-    
+
     async fn is_open(&self) -> bool {
-        let count = self.failure_count.load(std::sync::atomic::Ordering::Relaxed);
+        let count = self
+            .failure_count
+            .load(std::sync::atomic::Ordering::Relaxed);
         if count >= self.threshold {
             // Check if we should reset
             let last_failure = self.last_failure_time.read().await;
             if let Some(time) = *last_failure {
                 if time.elapsed() > self.reset_timeout {
                     // Reset the circuit
-                    self.failure_count.store(0, std::sync::atomic::Ordering::Relaxed);
+                    self.failure_count
+                        .store(0, std::sync::atomic::Ordering::Relaxed);
                     return false;
                 }
             }
@@ -393,13 +413,15 @@ impl CircuitBreaker {
             false
         }
     }
-    
+
     async fn on_success(&self) {
-        self.failure_count.store(0, std::sync::atomic::Ordering::Relaxed);
+        self.failure_count
+            .store(0, std::sync::atomic::Ordering::Relaxed);
     }
-    
+
     async fn on_failure(&self) {
-        self.failure_count.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
+        self.failure_count
+            .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         let mut last_failure = self.last_failure_time.write().await;
         *last_failure = Some(std::time::Instant::now());
     }
@@ -425,32 +447,32 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_dedup_by_key() {
         let items = vec![1, 2, 2, 3, 3, 3, 4];
         let deduped = dedup_by_key(items, |x| *x);
         assert_eq!(deduped, vec![1, 2, 3, 4]);
     }
-    
+
     #[test]
     fn test_flatten_unflatten() {
         let nested = vec![vec![1, 2], vec![3, 4, 5], vec![6]];
         let sizes: Vec<_> = nested.iter().map(|v| v.len()).collect();
-        
+
         let flat = flatten(nested.clone());
         assert_eq!(flat, vec![1, 2, 3, 4, 5, 6]);
-        
+
         let unflat = unflatten(flat, sizes);
         assert_eq!(unflat, nested);
     }
-    
+
     #[test]
     fn test_most_common() {
         let items = vec!["a", "b", "b", "c", "b", "c"];
         assert_eq!(most_common(items), Some("b"));
     }
-    
+
     #[tokio::test]
     async fn test_retry_with_backoff() {
         use std::sync::atomic::{AtomicUsize, Ordering};
@@ -463,7 +485,7 @@ mod tests {
                 Ok("Success")
             }
         };
-        
+
         let config = RetryConfig {
             max_attempts: 3,
             initial_delay: Duration::from_millis(10),
@@ -471,7 +493,7 @@ mod tests {
             exponential_base: 2.0,
             jitter: false,
         };
-        
+
         let result = retry_with_backoff(operation, config, "test_operation").await;
         assert!(result.is_ok());
     }

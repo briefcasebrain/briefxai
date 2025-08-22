@@ -20,19 +20,20 @@ impl AnalysisCluster {
             conversation_ids,
             name: cluster.name.clone(),
             description: cluster.summary.clone(),
-            children: cluster.children.as_ref()
+            children: cluster
+                .children
+                .as_ref()
                 .map(|children| {
-                    children.iter()
+                    children
+                        .iter()
                         .enumerate()
-                        .map(|(i, child)| {
-                            Self::from_conversation_cluster(child, vec![i])
-                        })
+                        .map(|(i, child)| Self::from_conversation_cluster(child, vec![i]))
                         .collect()
                 })
                 .unwrap_or_default(),
         }
     }
-    
+
     /// Create a simple analysis cluster
     pub fn new(conversation_ids: Vec<usize>, name: String, description: String) -> Self {
         Self {

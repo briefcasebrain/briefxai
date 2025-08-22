@@ -1,5 +1,5 @@
 // Basic test to verify core types and modules compile
-use briefxai::{BriefXAIConfig, Facet, FacetValue, ConversationData};
+use briefx::{BriefXAIConfig, Facet, FacetValue, ConversationData};
 
 fn main() {
     println!("Testing basic types...");

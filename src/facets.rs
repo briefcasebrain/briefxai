@@ -12,29 +12,25 @@ pub async fn extract_facets(
     data: &[ConversationData],
 ) -> Result<Vec<Vec<FacetValue>>> {
     info!("Extracting facets from {} conversations", data.len());
-    
+
     let llm_client = LlmClient::new(config.clone()).await?;
     let facets = crate::types::get_main_facets();
-    
+
     let mut all_facet_values = Vec::new();
-    
+
     for conversation in data {
         let mut conversation_facets = Vec::new();
-        
+
         for facet in &facets {
-            let facet_value = extract_single_facet(
-                &llm_client,
-                conversation,
-                facet,
-                config,
-            ).await?;
-            
+            let facet_value =
+                extract_single_facet(&llm_client, conversation, facet, config).await?;
+
             conversation_facets.push(facet_value);
         }
-        
+
         all_facet_values.push(conversation_facets);
     }
-    
+
     info!("Extracted facets for all conversations");
     Ok(all_facet_values)
 }
@@ -43,23 +39,23 @@ async fn extract_single_facet(
     llm_client: &LlmClient,
     conversation: &ConversationData,
     facet: &Facet,
-    config: &BriefXAIConfig,
+    _config: &BriefXAIConfig,
 ) -> Result<FacetValue> {
     let prompt = get_facet_prompt(conversation, facet);
-    
+
     // Sample multiple times if configured
     let n_samples = if facet.numeric.is_some() { 1 } else { 3 };
     let mut samples = Vec::new();
-    
+
     for _ in 0..n_samples {
         let response = llm_client.complete(&prompt).await?;
         let value = process_facet_response(&response, facet)?;
         samples.push(value);
     }
-    
+
     // Take most common response
     let final_value = most_common(samples).unwrap_or_default();
-    
+
     Ok(FacetValue {
         facet: facet.clone(),
         value: final_value,
@@ -68,7 +64,7 @@ async fn extract_single_facet(
 
 pub fn process_facet_response(response: &str, facet: &Facet) -> Result<String> {
     let cleaned = response.trim();
-    
+
     // Handle numeric facets
     if let Some((min, max)) = facet.numeric {
         if let Ok(num) = cleaned.parse::<i32>() {
@@ -85,12 +81,12 @@ pub fn process_facet_response(response: &str, facet: &Facet) -> Result<String> {
         // Default to middle value if parsing fails
         return Ok(((min + max) / 2).to_string());
     }
-    
+
     // Handle prefilled responses
     if !facet.prefill.is_empty() && cleaned.starts_with(&facet.prefill) {
         return Ok(cleaned[facet.prefill.len()..].trim().to_string());
     }
-    
+
     Ok(cleaned.to_string())
 }
 
@@ -99,7 +95,7 @@ fn extract_number(text: &str) -> Option<&str> {
     let chars: Vec<char> = text.chars().collect();
     let mut start = None;
     let mut end = None;
-    
+
     for (i, ch) in chars.iter().enumerate() {
         if ch.is_ascii_digit() {
             if start.is_none() {
@@ -110,7 +106,7 @@ fn extract_number(text: &str) -> Option<&str> {
             break;
         }
     }
-    
+
     if let (Some(s), Some(e)) = (start, end) {
         Some(&text[s..e])
     } else {
@@ -123,38 +119,36 @@ pub async fn extract_facets_batch(
     data: &[ConversationData],
     facets: &[Facet],
 ) -> Result<Vec<Vec<FacetValue>>> {
-    info!("Batch extracting {} facets from {} conversations", 
-          facets.len(), data.len());
-    
+    info!(
+        "Batch extracting {} facets from {} conversations",
+        facets.len(),
+        data.len()
+    );
+
     let llm_client = LlmClient::new(config.clone()).await?;
-    
+
     // Process in batches for efficiency
     let mut results = Vec::new();
     for conversation in data {
         let mut facet_values = Vec::new();
-        
+
         for facet in facets {
-            let value = extract_single_facet(
-                &llm_client,
-                conversation,
-                facet,
-                config,
-            ).await?;
+            let value = extract_single_facet(&llm_client, conversation, facet, config).await?;
             facet_values.push(value);
         }
-        
+
         results.push(facet_values);
     }
-    
+
     Ok(results)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{Message, ConversationData};
+    use crate::types::{ConversationData, Message};
     use std::collections::HashMap;
-    
+
     fn create_test_conversation() -> ConversationData {
         ConversationData {
             messages: vec![
@@ -170,7 +164,7 @@ mod tests {
             metadata: HashMap::new(),
         }
     }
-    
+
     fn create_test_config() -> BriefXAIConfig {
         BriefXAIConfig {
             llm_provider: crate::config::LlmProvider::OpenAI,
@@ -180,7 +174,7 @@ mod tests {
             ..Default::default()
         }
     }
-    
+
     #[test]
     fn test_extract_number() {
         assert_eq!(extract_number("The answer is 42"), Some("42"));
@@ -191,7 +185,7 @@ mod tests {
         assert_eq!(extract_number("Call 555-1234"), Some("555"));
         assert_eq!(extract_number(""), None);
     }
-    
+
     #[test]
     fn test_extract_number_edge_cases() {
         assert_eq!(extract_number("0"), Some("0"));
@@ -200,7 +194,7 @@ mod tests {
         assert_eq!(extract_number("!@#$%^&*()"), None);
         assert_eq!(extract_number("3.14159"), Some("3"));
     }
-    
+
     #[test]
     fn test_process_facet_response_numeric() {
         let facet = Facet {
@@ -210,11 +204,8 @@ mod tests {
             summary_criteria: None,
             numeric: Some((1, 5)),
         };
-        
-        assert_eq!(
-            process_facet_response("3", &facet).unwrap(),
-            "3"
-        );
+
+        assert_eq!(process_facet_response("3", &facet).unwrap(), "3");
         assert_eq!(
             process_facet_response("The score is 4", &facet).unwrap(),
             "4"
@@ -232,7 +223,7 @@ mod tests {
             "3" // Default to middle value
         );
     }
-    
+
     #[test]
     fn test_process_facet_response_numeric_edge_cases() {
         let facet = Facet {
@@ -242,15 +233,9 @@ mod tests {
             summary_criteria: None,
             numeric: Some((0, 1)),
         };
-        
-        assert_eq!(
-            process_facet_response("0", &facet).unwrap(),
-            "0"
-        );
-        assert_eq!(
-            process_facet_response("1", &facet).unwrap(),
-            "1"
-        );
+
+        assert_eq!(process_facet_response("0", &facet).unwrap(), "0");
+        assert_eq!(process_facet_response("1", &facet).unwrap(), "1");
         assert_eq!(
             process_facet_response("2", &facet).unwrap(),
             "1" // Clamped to max
@@ -260,7 +245,7 @@ mod tests {
             "0" // Clamped to min
         );
     }
-    
+
     #[test]
     fn test_process_facet_response_text() {
         let facet = Facet {
@@ -270,7 +255,7 @@ mod tests {
             summary_criteria: None,
             numeric: None,
         };
-        
+
         assert_eq!(
             process_facet_response("positive", &facet).unwrap(),
             "positive"
@@ -279,12 +264,9 @@ mod tests {
             process_facet_response("  negative  ", &facet).unwrap(),
             "negative"
         );
-        assert_eq!(
-            process_facet_response("", &facet).unwrap(),
-            ""
-        );
+        assert_eq!(process_facet_response("", &facet).unwrap(), "");
     }
-    
+
     #[test]
     fn test_process_facet_response_prefill() {
         let facet = Facet {
@@ -294,7 +276,7 @@ mod tests {
             summary_criteria: None,
             numeric: None,
         };
-        
+
         assert_eq!(
             process_facet_response("Category: Support", &facet).unwrap(),
             "Support"
@@ -308,7 +290,7 @@ mod tests {
             "Different format"
         );
     }
-    
+
     #[test]
     fn test_process_facet_response_complex_numeric() {
         let facet = Facet {
@@ -318,7 +300,7 @@ mod tests {
             summary_criteria: None,
             numeric: Some((1, 10)),
         };
-        
+
         assert_eq!(
             process_facet_response("I would rate this a 7 out of 10", &facet).unwrap(),
             "7"
@@ -332,7 +314,7 @@ mod tests {
             "5" // Default to middle
         );
     }
-    
+
     #[test]
     fn test_process_facet_response_boundary_conditions() {
         let facet = Facet {
@@ -342,34 +324,22 @@ mod tests {
             summary_criteria: None,
             numeric: Some((10, 20)),
         };
-        
+
         // Test exact boundaries
-        assert_eq!(
-            process_facet_response("10", &facet).unwrap(),
-            "10"
-        );
-        assert_eq!(
-            process_facet_response("20", &facet).unwrap(),
-            "20"
-        );
-        
+        assert_eq!(process_facet_response("10", &facet).unwrap(), "10");
+        assert_eq!(process_facet_response("20", &facet).unwrap(), "20");
+
         // Test beyond boundaries
-        assert_eq!(
-            process_facet_response("5", &facet).unwrap(),
-            "10"
-        );
-        assert_eq!(
-            process_facet_response("25", &facet).unwrap(),
-            "20"
-        );
-        
+        assert_eq!(process_facet_response("5", &facet).unwrap(), "10");
+        assert_eq!(process_facet_response("25", &facet).unwrap(), "20");
+
         // Test default
         assert_eq!(
             process_facet_response("no number", &facet).unwrap(),
             "15" // (10 + 20) / 2
         );
     }
-    
+
     #[test]
     fn test_numeric_clamping_edge_cases() {
         // Single value range
@@ -380,7 +350,7 @@ mod tests {
             summary_criteria: None,
             numeric: Some((5, 5)),
         };
-        
+
         assert_eq!(
             process_facet_response("3", &single_range_facet).unwrap(),
             "5"
@@ -394,7 +364,7 @@ mod tests {
             "5"
         );
     }
-    
+
     #[test]
     fn test_process_facet_response_whitespace_handling() {
         let facet = Facet {
@@ -404,7 +374,7 @@ mod tests {
             summary_criteria: None,
             numeric: None,
         };
-        
+
         assert_eq!(
             process_facet_response("   whitespace   ", &facet).unwrap(),
             "whitespace"
@@ -413,12 +383,9 @@ mod tests {
             process_facet_response("\n\tlined\n\t", &facet).unwrap(),
             "lined"
         );
-        assert_eq!(
-            process_facet_response("", &facet).unwrap(),
-            ""
-        );
+        assert_eq!(process_facet_response("", &facet).unwrap(), "");
     }
-    
+
     #[test]
     fn test_facet_value_creation() {
         let facet = Facet {
@@ -428,32 +395,32 @@ mod tests {
             summary_criteria: None,
             numeric: None,
         };
-        
+
         let facet_value = FacetValue {
             facet: facet.clone(),
             value: "test_value".to_string(),
         };
-        
+
         assert_eq!(facet_value.facet.name, "test_facet");
         assert_eq!(facet_value.value, "test_value");
     }
-    
+
     #[test]
     fn test_main_facets_available() {
         let facets = crate::types::get_main_facets();
         assert!(!facets.is_empty());
-        
+
         // Check that we have some expected facets
         let facet_names: Vec<String> = facets.iter().map(|f| f.name.clone()).collect();
         assert!(facet_names.len() > 0);
-        
+
         // Verify facet structure
         for facet in &facets {
             assert!(!facet.name.is_empty());
             assert!(!facet.question.is_empty());
         }
     }
-    
+
     #[test]
     fn test_number_extraction_comprehensive() {
         let test_cases = vec![
@@ -468,12 +435,17 @@ mod tests {
             ("1a2b3", Some("1")),
             ("!@#123$%^", Some("123")),
         ];
-        
+
         for (input, expected) in test_cases {
-            assert_eq!(extract_number(input), expected, "Failed for input: {}", input);
+            assert_eq!(
+                extract_number(input),
+                expected,
+                "Failed for input: {}",
+                input
+            );
         }
     }
-    
+
     #[test]
     fn test_facet_processing_consistency() {
         let facet = Facet {
@@ -483,12 +455,12 @@ mod tests {
             summary_criteria: None,
             numeric: Some((1, 5)),
         };
-        
+
         // Same input should produce same output
         let input = "The rating is 3";
         let result1 = process_facet_response(input, &facet).unwrap();
         let result2 = process_facet_response(input, &facet).unwrap();
-        
+
         assert_eq!(result1, result2);
     }
 }

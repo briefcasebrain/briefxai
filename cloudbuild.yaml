@@ -1,0 +1,50 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/briefxai:$COMMIT_SHA', '.']
+  
+  # Push the container image to Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/briefxai:$COMMIT_SHA']
+  
+  # Deploy container image to Cloud Run (Free Tier Optimized)
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - 'run'
+      - 'deploy'
+      - 'briefxai'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/briefxai:$COMMIT_SHA'
+      - '--region'
+      - '${_REGION}'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--port'
+      - '8080'
+      - '--memory'
+      - '512Mi'       # Free tier: 512MB
+      - '--cpu'
+      - '1'           # Free tier: 1 vCPU
+      - '--timeout'
+      - '300'         # 5 minutes (free tier friendly)
+      - '--max-instances'
+      - '1'           # Stay within free tier
+      - '--min-instances'
+      - '0'           # Scale to zero when not in use
+      - '--concurrency'
+      - '80'          # Limit concurrent requests
+      - '--set-env-vars'
+      - 'RUST_LOG=info'
+
+# Substitutions for environment-specific values
+substitutions:
+  _REGION: us-central1
+
+# Build timeout (free tier: 10 min/day)
+timeout: 600s
+
+# Use default machine type for free tier
+options:
+  logging: CLOUD_LOGGING_ONLY

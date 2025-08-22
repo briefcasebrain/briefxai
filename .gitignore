@@ -20,6 +20,12 @@ Cargo.lock
 # option (not recommended) you can uncomment the following to ignore the entire idea folder.
 .idea/
 
+# Demo and documentation artifacts
+demo_narrative*.md
+*.demo
+*.example
+realistic_conversations.json
+
 # VS Code
 .vscode/
 *.code-workspace

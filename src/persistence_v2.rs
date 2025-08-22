@@ -1,15 +1,15 @@
-use anyhow::{Result, Context, bail};
-use sqlx::{SqlitePool, sqlite::SqlitePoolOptions, Row};
-use serde::{Serialize, Deserialize};
-use serde_json;
-use std::path::PathBuf;
-use std::time::{SystemTime, UNIX_EPOCH};
-use tracing::info;
-use tokio::sync::RwLock;
-use std::sync::Arc;
+use anyhow::{bail, Context, Result};
 use dashmap::DashMap;
+use serde::{Deserialize, Serialize};
+use serde_json;
+use sha2::{Digest, Sha256};
+use sqlx::{sqlite::SqlitePoolOptions, Row, SqlitePool};
+use std::path::PathBuf;
+use std::sync::Arc;
+use std::time::{SystemTime, UNIX_EPOCH};
+use tokio::sync::RwLock;
+use tracing::info;
 use uuid::Uuid;
-use sha2::{Sha256, Digest};
 
 use crate::config::BriefXAIConfig;
 
@@ -34,13 +34,11 @@ impl Migration {
 }
 
 async fn get_migrations() -> Vec<Migration> {
-    vec![
-        Migration::new(
-            1,
-            "initial_schema",
-            include_str!("../migrations/001_initial_schema.sql")
-        ),
-    ]
+    vec![Migration::new(
+        1,
+        "initial_schema",
+        include_str!("../migrations/001_initial_schema.sql"),
+    )]
 }
 
 // ============================================================================
@@ -73,14 +71,14 @@ pub enum SessionStatus {
     Failed,
 }
 
-impl ToString for SessionStatus {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for SessionStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            SessionStatus::Pending => "pending".to_string(),
-            SessionStatus::Running => "running".to_string(),
-            SessionStatus::Paused => "paused".to_string(),
-            SessionStatus::Completed => "completed".to_string(),
-            SessionStatus::Failed => "failed".to_string(),
+            SessionStatus::Pending => write!(f, "pending"),
+            SessionStatus::Running => write!(f, "running"),
+            SessionStatus::Paused => write!(f, "paused"),
+            SessionStatus::Completed => write!(f, "completed"),
+            SessionStatus::Failed => write!(f, "failed"),
         }
     }
 }
@@ -122,13 +120,13 @@ pub enum BatchStatus {
     Failed,
 }
 
-impl ToString for BatchStatus {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for BatchStatus {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            BatchStatus::Pending => "pending".to_string(),
-            BatchStatus::Processing => "processing".to_string(),
-            BatchStatus::Completed => "completed".to_string(),
-            BatchStatus::Failed => "failed".to_string(),
+            BatchStatus::Pending => write!(f, "pending"),
+            BatchStatus::Processing => write!(f, "processing"),
+            BatchStatus::Completed => write!(f, "completed"),
+            BatchStatus::Failed => write!(f, "failed"),
         }
     }
 }
@@ -159,15 +157,15 @@ pub enum TemplateCategory {
     Custom,
 }
 
-impl ToString for TemplateCategory {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for TemplateCategory {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            TemplateCategory::General => "general".to_string(),
-            TemplateCategory::Support => "support".to_string(),
-            TemplateCategory::Sales => "sales".to_string(),
-            TemplateCategory::Medical => "medical".to_string(),
-            TemplateCategory::Education => "education".to_string(),
-            TemplateCategory::Custom => "custom".to_string(),
+            TemplateCategory::General => write!(f, "general"),
+            TemplateCategory::Support => write!(f, "support"),
+            TemplateCategory::Sales => write!(f, "sales"),
+            TemplateCategory::Medical => write!(f, "medical"),
+            TemplateCategory::Education => write!(f, "education"),
+            TemplateCategory::Custom => write!(f, "custom"),
         }
     }
 }
@@ -209,14 +207,14 @@ pub enum ProviderType {
     Alternative,
 }
 
-impl ToString for ProviderType {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for ProviderType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ProviderType::OpenAI => "openai".to_string(),
-            ProviderType::Ollama => "ollama".to_string(),
-            ProviderType::VLLM => "vllm".to_string(),
-            ProviderType::HuggingFace => "huggingface".to_string(),
-            ProviderType::Alternative => "alternative".to_string(),
+            ProviderType::OpenAI => write!(f, "openai"),
+            ProviderType::Ollama => write!(f, "ollama"),
+            ProviderType::VLLM => write!(f, "vllm"),
+            ProviderType::HuggingFace => write!(f, "huggingface"),
+            ProviderType::Alternative => write!(f, "alternative"),
         }
     }
 }
@@ -240,13 +238,13 @@ pub enum ResultType {
     Embedding,
 }
 
-impl ToString for ResultType {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for ResultType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ResultType::Facet => "facet".to_string(),
-            ResultType::Cluster => "cluster".to_string(),
-            ResultType::Insight => "insight".to_string(),
-            ResultType::Embedding => "embedding".to_string(),
+            ResultType::Facet => write!(f, "facet"),
+            ResultType::Cluster => write!(f, "cluster"),
+            ResultType::Insight => write!(f, "insight"),
+            ResultType::Embedding => write!(f, "embedding"),
         }
     }
 }
@@ -285,14 +283,16 @@ impl SessionManager {
         };
 
         let config_json = serde_json::to_string(&session.config)?;
-        
-        sqlx::query(r#"
+
+        sqlx::query(
+            r#"
             INSERT INTO analysis_sessions (
                 id, created_at, updated_at, status, config, 
                 current_batch, processed_conversations
             )
             VALUES (?, datetime('now'), datetime('now'), ?, ?, ?, ?)
-        "#)
+        "#,
+        )
         .bind(&session.id)
         .bind(session.status.to_string())
         .bind(config_json)
@@ -306,9 +306,11 @@ impl SessionManager {
     }
 
     pub async fn get_session(&self, session_id: &str) -> Result<Option<AnalysisSession>> {
-        let row = sqlx::query(r#"
+        let row = sqlx::query(
+            r#"
             SELECT * FROM analysis_sessions WHERE id = ?
-        "#)
+        "#,
+        )
         .bind(session_id)
         .fetch_optional(&self.pool)
         .await?;
@@ -325,9 +327,11 @@ impl SessionManager {
                 total_conversations: row.get("total_conversations"),
                 processed_conversations: row.get("processed_conversations"),
                 error_message: row.get("error_message"),
-                results: row.get::<Option<String>, _>("results")
+                results: row
+                    .get::<Option<String>, _>("results")
                     .and_then(|s| serde_json::from_str(&s).ok()),
-                metadata: row.get::<Option<String>, _>("metadata")
+                metadata: row
+                    .get::<Option<String>, _>("metadata")
                     .and_then(|s| serde_json::from_str(&s).ok()),
             };
             Ok(Some(session))
@@ -336,12 +340,18 @@ impl SessionManager {
         }
     }
 
-    pub async fn update_session_status(&self, session_id: &str, status: SessionStatus) -> Result<()> {
-        sqlx::query(r#"
+    pub async fn update_session_status(
+        &self,
+        session_id: &str,
+        status: SessionStatus,
+    ) -> Result<()> {
+        sqlx::query(
+            r#"
             UPDATE analysis_sessions 
             SET status = ?, updated_at = datetime('now')
             WHERE id = ?
-        "#)
+        "#,
+        )
         .bind(status.to_string())
         .bind(session_id)
         .execute(&self.pool)
@@ -358,21 +368,25 @@ impl SessionManager {
     }
 
     pub async fn pause_session(&self, session_id: &str) -> Result<()> {
-        self.update_session_status(session_id, SessionStatus::Paused).await
+        self.update_session_status(session_id, SessionStatus::Paused)
+            .await
     }
 
     pub async fn resume_session(&self, session_id: &str) -> Result<AnalysisSession> {
-        let mut session = self.get_session(session_id).await?
+        let mut session = self
+            .get_session(session_id)
+            .await?
             .context("Session not found")?;
-        
+
         if session.status != SessionStatus::Paused {
             bail!("Session is not paused");
         }
 
-        self.update_session_status(session_id, SessionStatus::Running).await?;
+        self.update_session_status(session_id, SessionStatus::Running)
+            .await?;
         session.status = SessionStatus::Running;
         *self.current_session.write().await = Some(session.clone());
-        
+
         Ok(session)
     }
 
@@ -387,7 +401,8 @@ impl SessionManager {
         let mut tx = self.pool.begin().await?;
 
         // Update or insert batch progress
-        sqlx::query(r#"
+        sqlx::query(
+            r#"
             INSERT INTO batch_progress (
                 session_id, batch_number, status, completed_at, 
                 output_data, error_message
@@ -399,7 +414,8 @@ impl SessionManager {
                 output_data = excluded.output_data,
                 error_message = excluded.error_message,
                 retry_count = retry_count + 1
-        "#)
+        "#,
+        )
         .bind(session_id)
         .bind(batch_number)
         .bind(status.to_string())
@@ -410,11 +426,13 @@ impl SessionManager {
 
         // Update session progress
         if matches!(status, BatchStatus::Completed) {
-            sqlx::query(r#"
+            sqlx::query(
+                r#"
                 UPDATE analysis_sessions 
                 SET current_batch = ?, updated_at = datetime('now')
                 WHERE id = ?
-            "#)
+            "#,
+            )
             .bind(batch_number + 1)
             .bind(session_id)
             .execute(&mut *tx)
@@ -426,11 +444,13 @@ impl SessionManager {
     }
 
     pub async fn get_last_successful_batch(&self, session_id: &str) -> Result<Option<i32>> {
-        let row = sqlx::query(r#"
+        let row = sqlx::query(
+            r#"
             SELECT MAX(batch_number) as last_batch
             FROM batch_progress
             WHERE session_id = ? AND status = 'completed'
-        "#)
+        "#,
+        )
         .bind(session_id)
         .fetch_optional(&self.pool)
         .await?;
@@ -443,21 +463,27 @@ impl SessionManager {
     }
 
     pub async fn recover_session(&self, session_id: &str) -> Result<AnalysisSession> {
-        let mut session = self.get_session(session_id).await?
+        let mut session = self
+            .get_session(session_id)
+            .await?
             .context("Session not found")?;
-        
+
         // Find last successful batch
         if let Some(last_batch) = self.get_last_successful_batch(session_id).await? {
             session.current_batch = last_batch + 1;
-            info!("Recovering session {} from batch {}", session_id, session.current_batch);
+            info!(
+                "Recovering session {} from batch {}",
+                session_id, session.current_batch
+            );
         } else {
             session.current_batch = 0;
             info!("Starting session {} from beginning", session_id);
         }
 
-        self.update_session_status(session_id, SessionStatus::Running).await?;
+        self.update_session_status(session_id, SessionStatus::Running)
+            .await?;
         *self.current_session.write().await = Some(session.clone());
-        
+
         Ok(session)
     }
 }
@@ -476,13 +502,15 @@ impl TemplateRepository {
     }
 
     pub async fn create_template(&self, template: AnalysisTemplate) -> Result<()> {
-        sqlx::query(r#"
+        sqlx::query(
+            r#"
             INSERT INTO analysis_templates (
                 id, name, description, category, is_public, config,
                 custom_prompts, facet_definitions, created_at, updated_at, created_by
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'), ?)
-        "#)
+        "#,
+        )
         .bind(&template.id)
         .bind(&template.name)
         .bind(&template.description)
@@ -494,14 +522,16 @@ impl TemplateRepository {
         .bind(&template.created_by)
         .execute(&self.pool)
         .await?;
-        
+
         Ok(())
     }
 
     pub async fn get_template(&self, template_id: &str) -> Result<Option<AnalysisTemplate>> {
-        let row = sqlx::query(r#"
+        let row = sqlx::query(
+            r#"
             SELECT * FROM analysis_templates WHERE id = ?
-        "#)
+        "#,
+        )
         .bind(template_id)
         .fetch_optional(&self.pool)
         .await?;
@@ -513,24 +543,31 @@ impl TemplateRepository {
         }
     }
 
-    pub async fn list_templates(&self, category: Option<TemplateCategory>) -> Result<Vec<AnalysisTemplate>> {
+    pub async fn list_templates(
+        &self,
+        category: Option<TemplateCategory>,
+    ) -> Result<Vec<AnalysisTemplate>> {
         let query = if let Some(cat) = category {
-            sqlx::query(r#"
+            sqlx::query(
+                r#"
                 SELECT * FROM analysis_templates 
                 WHERE category = ? AND is_public = true
                 ORDER BY name
-            "#)
+            "#,
+            )
             .bind(cat.to_string())
         } else {
-            sqlx::query(r#"
+            sqlx::query(
+                r#"
                 SELECT * FROM analysis_templates 
                 WHERE is_public = true
                 ORDER BY name
-            "#)
+            "#,
+            )
         };
 
         let rows = query.fetch_all(&self.pool).await?;
-        
+
         rows.into_iter()
             .map(|row| self.row_to_template(row))
             .collect()
@@ -551,9 +588,11 @@ impl TemplateRepository {
             },
             is_public: row.get("is_public"),
             config: serde_json::from_str(&row.get::<String, _>("config"))?,
-            custom_prompts: row.get::<Option<String>, _>("custom_prompts")
+            custom_prompts: row
+                .get::<Option<String>, _>("custom_prompts")
                 .and_then(|s| serde_json::from_str(&s).ok()),
-            facet_definitions: row.get::<Option<String>, _>("facet_definitions")
+            facet_definitions: row
+                .get::<Option<String>, _>("facet_definitions")
                 .and_then(|s| serde_json::from_str(&s).ok()),
             created_at: 0,
             updated_at: 0,
@@ -576,13 +615,15 @@ impl ProviderManager {
     }
 
     pub async fn add_provider(&self, provider: ProviderConfig) -> Result<()> {
-        sqlx::query(r#"
+        sqlx::query(
+            r#"
             INSERT INTO provider_configs (
                 id, name, provider_type, config, priority, is_active,
                 is_fallback, rate_limit, cost_per_token, created_at, updated_at
             )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))
-        "#)
+        "#,
+        )
         .bind(&provider.id)
         .bind(&provider.name)
         .bind(provider.provider_type.to_string())
@@ -594,16 +635,18 @@ impl ProviderManager {
         .bind(provider.cost_per_token.map(|c| c.to_string()))
         .execute(&self.pool)
         .await?;
-        
+
         Ok(())
     }
 
     pub async fn get_active_providers(&self) -> Result<Vec<ProviderConfig>> {
-        let rows = sqlx::query(r#"
+        let rows = sqlx::query(
+            r#"
             SELECT * FROM provider_configs 
             WHERE is_active = true
             ORDER BY priority ASC
-        "#)
+        "#,
+        )
         .fetch_all(&self.pool)
         .await?;
 
@@ -613,11 +656,13 @@ impl ProviderManager {
     }
 
     pub async fn get_fallback_providers(&self) -> Result<Vec<ProviderConfig>> {
-        let rows = sqlx::query(r#"
+        let rows = sqlx::query(
+            r#"
             SELECT * FROM provider_configs 
             WHERE is_active = true AND is_fallback = true
             ORDER BY priority ASC
-        "#)
+        "#,
+        )
         .fetch_all(&self.pool)
         .await?;
 
@@ -626,6 +671,7 @@ impl ProviderManager {
             .collect()
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub async fn record_usage(
         &self,
         provider_id: &str,
@@ -636,13 +682,15 @@ impl ProviderManager {
         error_message: Option<&str>,
         response_time_ms: i32,
     ) -> Result<()> {
-        sqlx::query(r#"
+        sqlx::query(
+            r#"
             INSERT INTO provider_usage (
                 provider_id, session_id, timestamp, tokens_used, cost,
                 success, error_message, response_time_ms
             )
             VALUES (?, ?, datetime('now'), ?, ?, ?, ?, ?)
-        "#)
+        "#,
+        )
         .bind(provider_id)
         .bind(session_id)
         .bind(tokens_used)
@@ -652,7 +700,7 @@ impl ProviderManager {
         .bind(response_time_ms)
         .execute(&self.pool)
         .await?;
-        
+
         Ok(())
     }
 
@@ -672,9 +720,11 @@ impl ProviderManager {
             priority: row.get("priority"),
             is_active: row.get("is_active"),
             is_fallback: row.get("is_fallback"),
-            rate_limit: row.get::<Option<String>, _>("rate_limit")
+            rate_limit: row
+                .get::<Option<String>, _>("rate_limit")
                 .and_then(|s| serde_json::from_str(&s).ok()),
-            cost_per_token: row.get::<Option<String>, _>("cost_per_token")
+            cost_per_token: row
+                .get::<Option<String>, _>("cost_per_token")
                 .and_then(|s| serde_json::from_str(&s).ok()),
             created_at: 0,
             updated_at: 0,
@@ -691,6 +741,7 @@ pub struct EnhancedPersistenceLayer {
     session_manager: Arc<SessionManager>,
     template_repo: Arc<TemplateRepository>,
     provider_manager: Arc<ProviderManager>,
+    #[allow(dead_code)]
     memory_cache: Arc<DashMap<String, (Vec<u8>, i64)>>,
 }
 
@@ -727,13 +778,15 @@ impl EnhancedPersistenceLayer {
 
     async fn run_migrations(pool: &SqlitePool) -> Result<()> {
         // Create migrations table
-        sqlx::query(r#"
+        sqlx::query(
+            r#"
             CREATE TABLE IF NOT EXISTS schema_migrations (
                 version INTEGER PRIMARY KEY,
                 name TEXT NOT NULL,
                 applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
-        "#)
+        "#,
+        )
         .execute(pool)
         .await?;
 
@@ -748,27 +801,30 @@ impl EnhancedPersistenceLayer {
         // Apply new migrations
         for migration in get_migrations().await {
             if !applied.contains(&migration.version) {
-                info!("Applying migration {}: {}", migration.version, migration.name);
-                
+                info!(
+                    "Applying migration {}: {}",
+                    migration.version, migration.name
+                );
+
                 let mut tx = pool.begin().await?;
-                
+
                 // Execute migration SQL
-                sqlx::raw_sql(&migration.sql)
-                    .execute(&mut *tx)
-                    .await?;
-                
+                sqlx::raw_sql(&migration.sql).execute(&mut *tx).await?;
+
                 // Record migration
-                sqlx::query(r#"
+                sqlx::query(
+                    r#"
                     INSERT INTO schema_migrations (version, name)
                     VALUES (?, ?)
-                "#)
+                "#,
+                )
                 .bind(migration.version)
                 .bind(&migration.name)
                 .execute(&mut *tx)
                 .await?;
-                
+
                 tx.commit().await?;
-                
+
                 info!("Migration {} applied successfully", migration.version);
             }
         }
@@ -795,19 +851,21 @@ impl EnhancedPersistenceLayer {
         result_type: ResultType,
         data: serde_json::Value,
     ) -> Result<()> {
-        sqlx::query(r#"
+        sqlx::query(
+            r#"
             INSERT INTO partial_results (
                 session_id, batch_number, result_type, data, created_at
             )
             VALUES (?, ?, ?, ?, datetime('now'))
-        "#)
+        "#,
+        )
         .bind(session_id)
         .bind(batch_number)
         .bind(result_type.to_string())
         .bind(data.to_string())
         .execute(&self.pool)
         .await?;
-        
+
         Ok(())
     }
 
@@ -817,24 +875,28 @@ impl EnhancedPersistenceLayer {
         result_type: Option<ResultType>,
     ) -> Result<Vec<PartialResult>> {
         let query = if let Some(rt) = result_type {
-            sqlx::query(r#"
+            sqlx::query(
+                r#"
                 SELECT * FROM partial_results
                 WHERE session_id = ? AND result_type = ?
                 ORDER BY created_at ASC
-            "#)
+            "#,
+            )
             .bind(session_id)
             .bind(rt.to_string())
         } else {
-            sqlx::query(r#"
+            sqlx::query(
+                r#"
                 SELECT * FROM partial_results
                 WHERE session_id = ?
                 ORDER BY created_at ASC
-            "#)
+            "#,
+            )
             .bind(session_id)
         };
 
         let rows = query.fetch_all(&self.pool).await?;
-        
+
         rows.into_iter()
             .map(|row| {
                 Ok(PartialResult {
@@ -864,7 +926,8 @@ impl EnhancedPersistenceLayer {
         output: serde_json::Value,
         ttl_seconds: i32,
     ) -> Result<()> {
-        sqlx::query(r#"
+        sqlx::query(
+            r#"
             INSERT INTO response_cache (
                 id, cache_key, cache_type, provider, input_hash, output,
                 created_at, accessed_at, access_count, ttl_seconds
@@ -874,7 +937,8 @@ impl EnhancedPersistenceLayer {
                 output = excluded.output,
                 accessed_at = datetime('now'),
                 access_count = access_count + 1
-        "#)
+        "#,
+        )
         .bind(Uuid::new_v4().to_string())
         .bind(cache_key)
         .bind(cache_type)
@@ -884,19 +948,18 @@ impl EnhancedPersistenceLayer {
         .bind(ttl_seconds)
         .execute(&self.pool)
         .await?;
-        
+
         Ok(())
     }
 
-    pub async fn get_cached_response(
-        &self,
-        cache_key: &str,
-    ) -> Result<Option<serde_json::Value>> {
-        let row = sqlx::query(r#"
+    pub async fn get_cached_response(&self, cache_key: &str) -> Result<Option<serde_json::Value>> {
+        let row = sqlx::query(
+            r#"
             SELECT output FROM response_cache
             WHERE cache_key = ? 
             AND datetime('now') < datetime(created_at, '+' || ttl_seconds || ' seconds')
-        "#)
+        "#,
+        )
         .bind(cache_key)
         .fetch_optional(&self.pool)
         .await?;
@@ -910,13 +973,15 @@ impl EnhancedPersistenceLayer {
     }
 
     pub async fn cleanup_expired_cache(&self) -> Result<()> {
-        sqlx::query(r#"
+        sqlx::query(
+            r#"
             DELETE FROM response_cache
             WHERE datetime('now') > datetime(created_at, '+' || ttl_seconds || ' seconds')
-        "#)
+        "#,
+        )
         .execute(&self.pool)
         .await?;
-        
+
         Ok(())
     }
 }
@@ -947,7 +1012,10 @@ pub async fn initialize_default_templates(persistence: &EnhancedPersistenceLayer
         AnalysisTemplate {
             id: "customer-support".to_string(),
             name: "Customer Support Analysis".to_string(),
-            description: Some("Analyze customer support conversations for common issues and sentiment".to_string()),
+            description: Some(
+                "Analyze customer support conversations for common issues and sentiment"
+                    .to_string(),
+            ),
             category: TemplateCategory::Support,
             is_public: true,
             config: serde_json::json!({
@@ -971,7 +1039,9 @@ pub async fn initialize_default_templates(persistence: &EnhancedPersistenceLayer
         AnalysisTemplate {
             id: "sales-conversations".to_string(),
             name: "Sales Conversation Analysis".to_string(),
-            description: Some("Analyze sales conversations for opportunities and objections".to_string()),
+            description: Some(
+                "Analyze sales conversations for opportunities and objections".to_string(),
+            ),
             category: TemplateCategory::Sales,
             is_public: true,
             config: serde_json::json!({
@@ -991,8 +1061,16 @@ pub async fn initialize_default_templates(persistence: &EnhancedPersistenceLayer
 
     for template in templates {
         // Check if template already exists
-        if persistence.template_repo().get_template(&template.id).await?.is_none() {
-            persistence.template_repo().create_template(template).await?;
+        if persistence
+            .template_repo()
+            .get_template(&template.id)
+            .await?
+            .is_none()
+        {
+            persistence
+                .template_repo()
+                .create_template(template)
+                .await?;
         }
     }
 

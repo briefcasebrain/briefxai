@@ -1,68 +1,18 @@
-# Clippy configuration for BriefXAI
-# This file configures Clippy linting rules for consistent code quality
+# Clippy configuration
 
-# Complexity limits
-type-complexity-threshold = 250
-too-many-arguments-threshold = 8
-too-many-lines-threshold = 150
-large-type-threshold = 200
-trivial-copy-size-limit = 128
-
-# Cognitive complexity threshold  
-cognitive-complexity-threshold = 30
-
-# Doc comment requirements
-missing-docs-in-private-items = false
-
-# Allow certain patterns common in ML/AI code
+# Deny certain lints
+msrv = "1.70.0"
+warn-on-all-wildcard-imports = true
 allow-expect-in-tests = true
 allow-unwrap-in-tests = true
+allow-dbg-in-tests = true
+allow-print-in-tests = true
 
-# Numeric precision for floating point comparisons
-float-cmp-const-threshold = 1e-6
-
-# Documentation requirements
-# Enable documentation linting but allow some flexibility for internal APIs
-check-private-items = false
-
-# Specific allows for ML/AI domain
-# These are commonly needed patterns in machine learning code
-msrv = "1.70.0"
-
-# Performance-related settings
-avoid-breaking-exported-api = true
-warn-on-all-wildcard-imports = true
-
-# Async-related settings
-large-futures-threshold = 1024
-
-# String length thresholds
-max-suggested-slice-pattern-length = 3
-
-# Vector initialization patterns
-vec-box-size-threshold = 4096
-
-# Enum variant name threshold
-enum-variant-name-threshold = 3
-
-# Single character lifetime names
-single-char-lifetime-names = true
-
-# Standard library usage patterns
-std-instead-of-core = false
-std-instead-of-alloc = false
-
-# Pedantic allows (commonly needed in ML code)
-# These are pedantic lints that we specifically allow
-pedantic-allows = [
-    "cast_possible_truncation",     # Common in ML for type conversions
-    "cast_precision_loss",          # Expected in ML algorithms
-    "cast_sign_loss",               # Often needed for array indexing
-    "cast_possible_wrap",           # Mathematical operations
-    "similar_names",                # ML variables often have similar names (x1, x2, etc.)
-    "too_many_lines",               # ML functions can be legitimately long
-    "module_name_repetitions",      # Common in domain-specific modules
-    "must_use_candidate",           # Not all builders need #[must_use]
-    "missing_errors_doc",           # Not all functions need error documentation
-    "missing_panics_doc",           # Not all functions need panic documentation
-]
+# Threshold configurations
+cognitive-complexity-threshold = 30
+too-many-arguments-threshold = 7
+type-complexity-threshold = 250
+single-char-binding-names-threshold = 4
+too-many-lines-threshold = 500
+array-size-threshold = 512000
+enum-variant-size-threshold = 200

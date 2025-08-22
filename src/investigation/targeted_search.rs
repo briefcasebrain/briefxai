@@ -1,6 +1,6 @@
 use crate::types::{ConversationData, FacetValue};
 use crate::types_extended::AnalysisCluster;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 /// Investigation query for targeted search
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -93,8 +93,11 @@ pub enum FilterOperator {
 #[derive(Debug, Clone)]
 pub struct InvestigationEngine {
     clusters: Vec<AnalysisCluster>,
+    #[allow(dead_code)]
     conversations: Vec<ConversationData>,
+    #[allow(dead_code)]
     facet_data: Vec<Vec<FacetValue>>,
+    #[allow(dead_code)]
     embeddings: Option<Vec<Vec<f32>>>,
 }
 
@@ -120,8 +123,11 @@ impl InvestigationEngine {
     /// Run investigation query
     pub fn investigate(&self, query: &InvestigationQuery) -> anyhow::Result<InvestigationResult> {
         // Stub implementation - in a real implementation, this would perform the actual search
-        tracing::info!("Running investigation with {} search terms", query.search_terms.len());
-        
+        tracing::info!(
+            "Running investigation with {} search terms",
+            query.search_terms.len()
+        );
+
         Ok(InvestigationResult {
             clusters: self.clusters.clone(),
             total_matches: self.clusters.len(),

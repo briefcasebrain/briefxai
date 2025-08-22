@@ -1,12 +1,12 @@
-use anyhow::{Result, anyhow};
-use std::time::{Duration, Instant};
-use std::sync::{Arc, Mutex};
-use std::collections::HashMap;
-use tokio::time::sleep;
-use tracing::{error, warn, info, instrument};
-use serde::{Serialize, Deserialize};
+use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use rand::Rng;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
+use tokio::time::sleep;
+use tracing::{error, info, instrument, warn};
 
 /// Comprehensive error recovery and resilience system for BriefXAI
 #[derive(Debug, Clone)]
@@ -123,56 +123,77 @@ impl ErrorRecoverySystem {
 
     fn setup_default_policies(&mut self) {
         // Default retry policy for API calls
-        self.retry_policies.insert("api_call".to_string(), RetryPolicy {
-            max_attempts: 3,
-            initial_delay: Duration::from_millis(500),
-            max_delay: Duration::from_secs(30),
-            backoff_multiplier: 2.0,
-            jitter: true,
-            retry_on: vec![
-                ErrorType::NetworkError,
-                ErrorType::TimeoutError,
-                ErrorType::TemporaryServiceError,
-                ErrorType::InternalServerError,
-                ErrorType::BadGatewayError,
-                ErrorType::ServiceUnavailableError,
-            ],
-        });
+        self.retry_policies.insert(
+            "api_call".to_string(),
+            RetryPolicy {
+                max_attempts: 3,
+                initial_delay: Duration::from_millis(500),
+                max_delay: Duration::from_secs(30),
+                backoff_multiplier: 2.0,
+                jitter: true,
+                retry_on: vec![
+                    ErrorType::NetworkError,
+                    ErrorType::TimeoutError,
+                    ErrorType::TemporaryServiceError,
+                    ErrorType::InternalServerError,
+                    ErrorType::BadGatewayError,
+                    ErrorType::ServiceUnavailableError,
+                ],
+            },
+        );
 
         // Retry policy for LLM providers
-        self.retry_policies.insert("llm_provider".to_string(), RetryPolicy {
-            max_attempts: 5,
-            initial_delay: Duration::from_millis(1000),
-            max_delay: Duration::from_secs(60),
-            backoff_multiplier: 1.5,
-            jitter: true,
-            retry_on: vec![
-                ErrorType::RateLimitError,
-                ErrorType::TemporaryServiceError,
-                ErrorType::TimeoutError,
-                ErrorType::ServiceUnavailableError,
-            ],
-        });
+        self.retry_policies.insert(
+            "llm_provider".to_string(),
+            RetryPolicy {
+                max_attempts: 5,
+                initial_delay: Duration::from_millis(1000),
+                max_delay: Duration::from_secs(60),
+                backoff_multiplier: 1.5,
+                jitter: true,
+                retry_on: vec![
+                    ErrorType::RateLimitError,
+                    ErrorType::TemporaryServiceError,
+                    ErrorType::TimeoutError,
+                    ErrorType::ServiceUnavailableError,
+                ],
+            },
+        );
 
         // Retry policy for embedding generation
-        self.retry_policies.insert("embedding_generation".to_string(), RetryPolicy {
-            max_attempts: 3,
-            initial_delay: Duration::from_millis(2000),
-            max_delay: Duration::from_secs(45),
-            backoff_multiplier: 2.0,
-            jitter: true,
-            retry_on: vec![
-                ErrorType::TimeoutError,
-                ErrorType::RateLimitError,
-                ErrorType::TemporaryServiceError,
-            ],
-        });
+        self.retry_policies.insert(
+            "embedding_generation".to_string(),
+            RetryPolicy {
+                max_attempts: 3,
+                initial_delay: Duration::from_millis(2000),
+                max_delay: Duration::from_secs(45),
+                backoff_multiplier: 2.0,
+                jitter: true,
+                retry_on: vec![
+                    ErrorType::TimeoutError,
+                    ErrorType::RateLimitError,
+                    ErrorType::TemporaryServiceError,
+                ],
+            },
+        );
 
         // Setup fallback strategies
-        self.fallback_strategies.insert("llm_provider".to_string(), FallbackStrategy::UseAlternativeProvider);
-        self.fallback_strategies.insert("embedding_generation".to_string(), FallbackStrategy::UseAlternativeProvider);
-        self.fallback_strategies.insert("clustering".to_string(), FallbackStrategy::ReturnPartialResults);
-        self.fallback_strategies.insert("facet_extraction".to_string(), FallbackStrategy::SkipNonEssential);
+        self.fallback_strategies.insert(
+            "llm_provider".to_string(),
+            FallbackStrategy::UseAlternativeProvider,
+        );
+        self.fallback_strategies.insert(
+            "embedding_generation".to_string(),
+            FallbackStrategy::UseAlternativeProvider,
+        );
+        self.fallback_strategies.insert(
+            "clustering".to_string(),
+            FallbackStrategy::ReturnPartialResults,
+        );
+        self.fallback_strategies.insert(
+            "facet_extraction".to_string(),
+            FallbackStrategy::SkipNonEssential,
+        );
     }
 
     #[instrument(skip(self, operation))]
@@ -194,7 +215,9 @@ impl ErrorRecoverySystem {
         if let Some(circuit_breaker) = self.get_circuit_breaker(operation_name) {
             if circuit_breaker.state == CircuitBreakerState::Open {
                 if let Some(fallback) = self.fallback_strategies.get(operation_name) {
-                    return self.execute_fallback(operation_name, fallback.clone(), start_time).await;
+                    return self
+                        .execute_fallback(operation_name, fallback.clone(), start_time)
+                        .await;
                 } else {
                     return RecoveryResult {
                         result: Err(anyhow!("Circuit breaker is open and no fallback available")),
@@ -208,7 +231,9 @@ impl ErrorRecoverySystem {
         }
 
         // Get retry policy
-        let retry_policy = self.retry_policies.get(operation_name)
+        let retry_policy = self
+            .retry_policies
+            .get(operation_name)
             .cloned()
             .unwrap_or_else(|| self.get_default_retry_policy());
 
@@ -219,8 +244,9 @@ impl ErrorRecoverySystem {
             match operation().await {
                 Ok(result) => {
                     // Record success
-                    self.record_success(operation_name, attempts, start_time.elapsed()).await;
-                    
+                    self.record_success(operation_name, attempts, start_time.elapsed())
+                        .await;
+
                     if attempts > 1 {
                         recovery_method = Some(RecoveryMethod::Retry);
                     }
@@ -232,7 +258,7 @@ impl ErrorRecoverySystem {
                         recovery_method,
                         fallback_used: false,
                     };
-                },
+                }
                 Err(error) => {
                     last_error = Some(anyhow::Error::msg(error.to_string()));
                     let error_type = self.classify_error(&error);
@@ -252,7 +278,7 @@ impl ErrorRecoverySystem {
 
                     // Calculate delay with exponential backoff and jitter
                     let delay = self.calculate_retry_delay(&retry_policy, attempts);
-                    
+
                     info!(
                         "Retrying operation '{}' after error: {} (attempt {}/{})",
                         operation_name, error, attempts, retry_policy.max_attempts
@@ -270,12 +296,15 @@ impl ErrorRecoverySystem {
                 operation_name, fallback
             );
 
-            return self.execute_fallback(operation_name, fallback.clone(), start_time).await;
+            return self
+                .execute_fallback(operation_name, fallback.clone(), start_time)
+                .await;
         }
 
         // No fallback available, return the last error
-        let final_error = last_error.unwrap_or_else(|| anyhow!("Operation failed without specific error"));
-        
+        let final_error =
+            last_error.unwrap_or_else(|| anyhow!("Operation failed without specific error"));
+
         RecoveryResult {
             result: Err(final_error),
             attempts,
@@ -291,14 +320,20 @@ impl ErrorRecoverySystem {
         fallback: FallbackStrategy,
         start_time: Instant,
     ) -> RecoveryResult<T> {
-        info!("Executing fallback strategy '{:?}' for operation '{}'", fallback, operation_name);
+        info!(
+            "Executing fallback strategy '{:?}' for operation '{}'",
+            fallback, operation_name
+        );
 
         self.record_fallback_activation(operation_name).await;
 
         // Implementation would depend on the specific fallback strategy
         // For now, we'll return an error indicating fallback was attempted
         RecoveryResult {
-            result: Err(anyhow!("Fallback strategy {:?} executed but not implemented", fallback)),
+            result: Err(anyhow!(
+                "Fallback strategy {:?} executed but not implemented",
+                fallback
+            )),
             attempts: 0,
             total_time: start_time.elapsed(),
             recovery_method: Some(RecoveryMethod::FallbackExecution),
@@ -313,7 +348,8 @@ impl ErrorRecoverySystem {
             ErrorType::TimeoutError
         } else if error_string.contains("network") || error_string.contains("connection") {
             ErrorType::NetworkError
-        } else if error_string.contains("rate limit") || error_string.contains("too many requests") {
+        } else if error_string.contains("rate limit") || error_string.contains("too many requests")
+        {
             ErrorType::RateLimitError
         } else if error_string.contains("authentication") || error_string.contains("unauthorized") {
             ErrorType::AuthenticationError
@@ -356,18 +392,21 @@ impl ErrorRecoverySystem {
 
     pub fn add_circuit_breaker(&self, operation_name: &str, config: CircuitBreakerConfig) {
         let mut breakers = self.circuit_breakers.lock().unwrap();
-        breakers.insert(operation_name.to_string(), CircuitBreaker {
-            state: CircuitBreakerState::Closed,
-            failure_count: 0,
-            success_count: 0,
-            last_failure_time: None,
-            config,
-        });
+        breakers.insert(
+            operation_name.to_string(),
+            CircuitBreaker {
+                state: CircuitBreakerState::Closed,
+                failure_count: 0,
+                success_count: 0,
+                last_failure_time: None,
+                config,
+            },
+        );
     }
 
     async fn record_success(&self, operation_name: &str, attempts: u32, duration: Duration) {
         let mut stats = self.recovery_stats.lock().unwrap();
-        
+
         if attempts > 1 {
             stats.recovered_errors += 1;
             stats.retry_attempts += attempts as u64 - 1;
@@ -377,25 +416,31 @@ impl ErrorRecoverySystem {
         if let Ok(mut breakers) = self.circuit_breakers.try_lock() {
             if let Some(breaker) = breakers.get_mut(operation_name) {
                 breaker.success_count += 1;
-                
+
                 match breaker.state {
                     CircuitBreakerState::HalfOpen => {
                         if breaker.success_count >= breaker.config.success_threshold {
                             breaker.state = CircuitBreakerState::Closed;
                             breaker.failure_count = 0;
-                            info!("Circuit breaker for '{}' moved to CLOSED state", operation_name);
+                            info!(
+                                "Circuit breaker for '{}' moved to CLOSED state",
+                                operation_name
+                            );
                         }
-                    },
+                    }
                     CircuitBreakerState::Open => {
                         // Check if timeout has passed
                         if let Some(last_failure) = breaker.last_failure_time {
                             if last_failure.elapsed() >= breaker.config.timeout {
                                 breaker.state = CircuitBreakerState::HalfOpen;
                                 breaker.success_count = 1;
-                                info!("Circuit breaker for '{}' moved to HALF_OPEN state", operation_name);
+                                info!(
+                                    "Circuit breaker for '{}' moved to HALF_OPEN state",
+                                    operation_name
+                                );
                             }
                         }
-                    },
+                    }
                     CircuitBreakerState::Closed => {
                         breaker.failure_count = 0; // Reset failure count on success
                     }
@@ -409,7 +454,7 @@ impl ErrorRecoverySystem {
     async fn record_failure(&self, operation_name: &str, error_type: &ErrorType) {
         let mut stats = self.recovery_stats.lock().unwrap();
         stats.total_errors += 1;
-        
+
         let error_key = format!("{:?}", error_type);
         *stats.error_breakdown.entry(error_key).or_insert(0) += 1;
 
@@ -418,11 +463,14 @@ impl ErrorRecoverySystem {
             if let Some(breaker) = breakers.get_mut(operation_name) {
                 breaker.failure_count += 1;
                 breaker.last_failure_time = Some(Instant::now());
-                
+
                 if breaker.failure_count >= breaker.config.failure_threshold {
                     breaker.state = CircuitBreakerState::Open;
                     stats.circuit_breaker_trips += 1;
-                    warn!("Circuit breaker for '{}' tripped to OPEN state", operation_name);
+                    warn!(
+                        "Circuit breaker for '{}' tripped to OPEN state",
+                        operation_name
+                    );
                 }
             }
         }
@@ -434,7 +482,7 @@ impl ErrorRecoverySystem {
         let mut stats = self.recovery_stats.lock().unwrap();
         stats.fallback_activations += 1;
         stats.last_updated = Utc::now();
-        
+
         info!("Fallback activated for operation: {}", operation_name);
     }
 
@@ -444,13 +492,13 @@ impl ErrorRecoverySystem {
         if total_operations > 0 {
             let current_avg = stats.average_recovery_time_ms;
             let new_time = duration.as_millis() as f64;
-            stats.average_recovery_time_ms = 
+            stats.average_recovery_time_ms =
                 (current_avg * (total_operations - 1) as f64 + new_time) / total_operations as f64;
         }
 
         // Update success rate
         if stats.total_errors > 0 {
-            stats.recovery_success_rate = 
+            stats.recovery_success_rate =
                 (stats.recovered_errors as f64 / stats.total_errors as f64) * 100.0;
         }
 
@@ -486,18 +534,23 @@ impl ErrorRecoverySystem {
             info!("Circuit breaker for '{}' has been reset", operation_name);
             Ok(())
         } else {
-            Err(anyhow!("Circuit breaker not found for operation: {}", operation_name))
+            Err(anyhow!(
+                "Circuit breaker not found for operation: {}",
+                operation_name
+            ))
         }
     }
 
     pub fn get_circuit_breaker_status(&self, operation_name: &str) -> Option<CircuitBreakerStatus> {
         let breakers = self.circuit_breakers.lock().unwrap();
-        breakers.get(operation_name).map(|breaker| CircuitBreakerStatus {
-            state: breaker.state.clone(),
-            failure_count: breaker.failure_count,
-            success_count: breaker.success_count,
-            last_failure_time: breaker.last_failure_time,
-        })
+        breakers
+            .get(operation_name)
+            .map(|breaker| CircuitBreakerStatus {
+                state: breaker.state.clone(),
+                failure_count: breaker.failure_count,
+                success_count: breaker.success_count,
+                last_failure_time: breaker.last_failure_time,
+            })
     }
 
     /// Provider failover for API calls
@@ -516,25 +569,25 @@ impl ErrorRecoverySystem {
 
         for provider in providers {
             attempts += 1;
-            
+
             match operation(provider.clone()).await {
                 Ok(result) => {
                     if attempts > 1 {
                         info!("Provider failover successful, used provider: {}", provider);
                     }
-                    
+
                     return RecoveryResult {
                         result: Ok(result),
                         attempts,
                         total_time: start_time.elapsed(),
-                        recovery_method: if attempts > 1 { 
-                            Some(RecoveryMethod::ProviderFailover) 
-                        } else { 
-                            None 
+                        recovery_method: if attempts > 1 {
+                            Some(RecoveryMethod::ProviderFailover)
+                        } else {
+                            None
                         },
                         fallback_used: false,
                     };
-                },
+                }
                 Err(error) => {
                     warn!("Provider {} failed: {}", provider, error);
                     last_error = Some(error);
@@ -585,9 +638,9 @@ impl Default for RecoveryStatistics {
 #[macro_export]
 macro_rules! with_recovery {
     ($recovery_system:expr, $operation_name:expr, $operation:expr) => {
-        $recovery_system.execute_with_recovery($operation_name, || async {
-            $operation
-        }).await
+        $recovery_system
+            .execute_with_recovery($operation_name, || async { $operation })
+            .await
     };
 }
 
@@ -598,10 +651,10 @@ mod tests {
     #[tokio::test]
     async fn test_successful_operation_no_retry() {
         let recovery_system = ErrorRecoverySystem::new();
-        
-        let result = recovery_system.execute_with_recovery("test_op", || async {
-            Ok::<i32, anyhow::Error>(42)
-        }).await;
+
+        let result = recovery_system
+            .execute_with_recovery("test_op", || async { Ok::<i32, anyhow::Error>(42) })
+            .await;
 
         assert!(result.result.is_ok());
         assert_eq!(result.result.unwrap(), 42);
@@ -613,82 +666,103 @@ mod tests {
     async fn test_retry_on_failure() {
         let recovery_system = ErrorRecoverySystem::new();
         let attempt_count = std::sync::Arc::new(std::sync::atomic::AtomicU32::new(0));
-        
-        let result = recovery_system.execute_with_recovery("api_call", || {
-            let count_clone = attempt_count.clone();
-            async move {
-                let count = count_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
-                if count < 3 {
-                    Err(anyhow!("Network error"))
-                } else {
-                    Ok(42)
+
+        let result = recovery_system
+            .execute_with_recovery("api_call", || {
+                let count_clone = attempt_count.clone();
+                async move {
+                    let count = count_clone.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1;
+                    if count < 3 {
+                        Err(anyhow!("Network error"))
+                    } else {
+                        Ok(42)
+                    }
                 }
-            }
-        }).await;
+            })
+            .await;
 
         assert!(result.result.is_ok());
         assert_eq!(result.result.unwrap(), 42);
         assert_eq!(result.attempts, 3);
-        assert!(matches!(result.recovery_method, Some(RecoveryMethod::Retry)));
+        assert!(matches!(
+            result.recovery_method,
+            Some(RecoveryMethod::Retry)
+        ));
     }
 
     #[tokio::test]
     async fn test_circuit_breaker() {
         let recovery_system = ErrorRecoverySystem::new();
-        
+
         // Add circuit breaker
-        recovery_system.add_circuit_breaker("test_cb", CircuitBreakerConfig {
-            failure_threshold: 2,
-            success_threshold: 2,
-            timeout: Duration::from_secs(1),
-            max_requests_half_open: 1,
-        });
+        recovery_system.add_circuit_breaker(
+            "test_cb",
+            CircuitBreakerConfig {
+                failure_threshold: 2,
+                success_threshold: 2,
+                timeout: Duration::from_secs(1),
+                max_requests_half_open: 1,
+            },
+        );
 
         // First two failures should trip the circuit breaker
         for _ in 0..2 {
-            let _ = recovery_system.execute_with_recovery("test_cb", || async {
-                Err::<i32, anyhow::Error>(anyhow!("Service error"))
-            }).await;
+            let _ = recovery_system
+                .execute_with_recovery("test_cb", || async {
+                    Err::<i32, anyhow::Error>(anyhow!("Service error"))
+                })
+                .await;
         }
 
         // Circuit breaker should now be open
-        let status = recovery_system.get_circuit_breaker_status("test_cb").unwrap();
+        let status = recovery_system
+            .get_circuit_breaker_status("test_cb")
+            .unwrap();
         assert!(matches!(status.state, CircuitBreakerState::Open));
     }
 
     #[tokio::test]
     async fn test_provider_failover() {
         let recovery_system = ErrorRecoverySystem::new();
-        let providers = vec!["provider1".to_string(), "provider2".to_string(), "provider3".to_string()];
-        
-        let result = recovery_system.execute_with_provider_failover(providers, |provider| async move {
-            if provider == "provider3" {
-                Ok(format!("Success with {}", provider))
-            } else {
-                Err(anyhow!("Provider {} failed", provider))
-            }
-        }).await;
+        let providers = vec![
+            "provider1".to_string(),
+            "provider2".to_string(),
+            "provider3".to_string(),
+        ];
+
+        let result = recovery_system
+            .execute_with_provider_failover(providers, |provider| async move {
+                if provider == "provider3" {
+                    Ok(format!("Success with {}", provider))
+                } else {
+                    Err(anyhow!("Provider {} failed", provider))
+                }
+            })
+            .await;
 
         assert!(result.result.is_ok());
         assert_eq!(result.result.unwrap(), "Success with provider3");
         assert_eq!(result.attempts, 3);
-        assert!(matches!(result.recovery_method, Some(RecoveryMethod::ProviderFailover)));
+        assert!(matches!(
+            result.recovery_method,
+            Some(RecoveryMethod::ProviderFailover)
+        ));
     }
 
     #[tokio::test]
     async fn test_error_classification() {
         let recovery_system = ErrorRecoverySystem::new();
-        
+
         assert!(matches!(
             recovery_system.classify_error(&anyhow!("Connection timeout")),
             ErrorType::TimeoutError
         ));
-        
+
         assert!(matches!(
             recovery_system.classify_error(&anyhow!("Rate limit exceeded")),
             ErrorType::RateLimitError
         ));
-        
+
         assert!(matches!(
             recovery_system.classify_error(&anyhow!("Network connection failed")),
             ErrorType::NetworkError
@@ -698,11 +772,13 @@ mod tests {
     #[tokio::test]
     async fn test_statistics_tracking() {
         let recovery_system = ErrorRecoverySystem::new();
-        
+
         // Simulate some operations
-        let _ = recovery_system.execute_with_recovery("test", || async {
-            Err::<i32, anyhow::Error>(anyhow!("Network error"))
-        }).await;
+        let _ = recovery_system
+            .execute_with_recovery("test", || async {
+                Err::<i32, anyhow::Error>(anyhow!("Network error"))
+            })
+            .await;
 
         let stats = recovery_system.get_statistics();
         assert_eq!(stats.total_errors, 2); // Includes retries

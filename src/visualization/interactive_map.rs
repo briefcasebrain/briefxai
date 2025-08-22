@@ -1,6 +1,6 @@
-use serde::{Serialize, Deserialize};
-use crate::types::{FacetValue};
+use crate::types::FacetValue;
 use crate::types_extended::AnalysisCluster;
+use serde::{Deserialize, Serialize};
 
 /// Facet overlay configuration for visualization
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -47,6 +47,7 @@ pub struct InteractiveMap {
     clusters: Vec<AnalysisCluster>,
     coordinates: Vec<(f32, f32)>,
     facet_data: Vec<Vec<FacetValue>>,
+    active_overlay: Option<FacetOverlay>,
 }
 
 impl InteractiveMap {
@@ -59,6 +60,7 @@ impl InteractiveMap {
             clusters,
             coordinates,
             facet_data: facet_data.to_vec(),
+            active_overlay: None,
         })
     }
 
@@ -72,18 +74,51 @@ impl InteractiveMap {
 
     /// Apply a facet overlay to the map
     pub fn apply_facet_overlay(&mut self, overlay: FacetOverlay) -> anyhow::Result<()> {
-        // Stub implementation - in a real implementation, this would modify the visualization
-        tracing::info!("Applied facet overlay: {} with color scheme {:?}", overlay.facet_name, overlay.color_scheme);
+        tracing::info!(
+            "Applied facet overlay: {} with color scheme {:?}",
+            overlay.facet_name,
+            overlay.color_scheme
+        );
+        self.active_overlay = Some(overlay);
         Ok(())
     }
 
     /// Export map data for frontend consumption
     pub fn export_for_frontend(&self) -> serde_json::Value {
-        // Stub implementation - in a real implementation, this would return structured map data
-        serde_json::json!({
+        let points: Vec<serde_json::Value> = self
+            .coordinates
+            .iter()
+            .enumerate()
+            .map(|(i, (x, y))| {
+                serde_json::json!({
+                    "id": i,
+                    "x": x,
+                    "y": y,
+                    "cluster_id": if i < self.clusters.len() {
+                        self.clusters[i].name.clone()
+                    } else {
+                        format!("cluster_{}", i)
+                    }
+                })
+            })
+            .collect();
+
+        let mut result = serde_json::json!({
+            "points": points,
             "clusters": self.clusters.len(),
             "coordinates": self.coordinates.len(),
             "facet_data": self.facet_data.len()
-        })
+        });
+
+        if let Some(ref overlay) = self.active_overlay {
+            result["active_overlay"] = serde_json::json!({
+                "facet_name": overlay.facet_name,
+                "enabled": overlay.enabled,
+                "color_scheme": format!("{:?}", overlay.color_scheme),
+                "aggregation": format!("{:?}", overlay.aggregation),
+            });
+        }
+
+        result
     }
 }

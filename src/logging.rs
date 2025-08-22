@@ -1,16 +1,19 @@
 use anyhow::Result;
-use serde::{Serialize, Deserialize};
+use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use tracing::{Event, Subscriber, field::{Field, Visit}};
+use tracing::{
+    field::{Field, Visit},
+    Event, Subscriber,
+};
 use tracing_subscriber::{
+    filter::{EnvFilter, LevelFilter},
+    fmt::{self, format::FmtSpan},
     layer::{Layer, SubscriberExt},
     util::SubscriberInitExt,
-    fmt::{self, format::FmtSpan},
-    filter::{EnvFilter, LevelFilter},
     Registry,
 };
-use chrono::{DateTime, Utc};
 
 /// Comprehensive logging system for BriefXAI with structured logging,
 /// audit trails, security logging, and performance metrics
@@ -104,6 +107,7 @@ pub struct PerformanceMetrics {
 #[derive(Debug)]
 pub struct AuditLogger {
     entries: Vec<AuditEntry>,
+    #[allow(dead_code)]
     config: AuditConfig,
 }
 
@@ -157,6 +161,7 @@ pub struct AuditConfig {
 #[derive(Debug)]
 pub struct SecurityLogger {
     events: Vec<SecurityEvent>,
+    #[allow(dead_code)]
     threat_detector: ThreatDetector,
 }
 
@@ -205,7 +210,9 @@ pub struct ThreatIndicator {
 
 #[derive(Debug)]
 pub struct ThreatDetector {
+    #[allow(dead_code)]
     patterns: Vec<ThreatPattern>,
+    #[allow(dead_code)]
     rate_limits: HashMap<String, RateLimit>,
 }
 
@@ -229,6 +236,7 @@ pub struct RateLimit {
 #[derive(Debug)]
 pub struct PerformanceLogger {
     entries: Vec<PerformanceEntry>,
+    #[allow(dead_code)]
     thresholds: PerformanceThresholds,
 }
 
@@ -293,9 +301,7 @@ impl LoggingSystem {
             .add_directive("reqwest=info".parse()?);
 
         let fmt_layer = match self.config.format {
-            LogFormat::Json => fmt::layer()
-                .with_target(true)
-                .boxed(),
+            LogFormat::Json => fmt::layer().with_target(true).boxed(),
             LogFormat::Pretty => fmt::layer()
                 .pretty()
                 .with_target(true)
@@ -303,10 +309,7 @@ impl LoggingSystem {
                 .with_file(true)
                 .with_line_number(true)
                 .boxed(),
-            LogFormat::Compact => fmt::layer()
-                .compact()
-                .with_target(false)
-                .boxed(),
+            LogFormat::Compact => fmt::layer().compact().with_target(false).boxed(),
             LogFormat::Full => fmt::layer()
                 .with_target(true)
                 .with_thread_ids(true)
@@ -328,7 +331,7 @@ impl LoggingSystem {
     pub fn log_structured(&self, entry: LogEntry) {
         // Filter sensitive fields
         let filtered_entry = self.filter_sensitive_fields(entry);
-        
+
         match filtered_entry.level {
             LogLevel::Error => tracing::error!(
                 message = %filtered_entry.message,
@@ -423,7 +426,7 @@ impl LoggingSystem {
         }
 
         let is_slow = entry.duration_ms > 1000; // 1 second threshold
-        
+
         if is_slow {
             tracing::warn!(
                 operation = %entry.operation,
@@ -459,20 +462,31 @@ impl LoggingSystem {
 
     pub fn record_histogram(&self, name: &str, value: f64) {
         if let Ok(mut collector) = self.metrics_collector.lock() {
-            collector.histograms.entry(name.to_string()).or_insert_with(Vec::new).push(value);
+            collector
+                .histograms
+                .entry(name.to_string())
+                .or_insert_with(Vec::new)
+                .push(value);
         }
     }
 
     pub fn record_timer(&self, name: &str, duration_ms: u64) {
         if let Ok(mut collector) = self.metrics_collector.lock() {
-            collector.timers.entry(name.to_string()).or_insert_with(Vec::new).push(duration_ms);
+            collector
+                .timers
+                .entry(name.to_string())
+                .or_insert_with(Vec::new)
+                .push(duration_ms);
         }
     }
 
     fn filter_sensitive_fields(&self, mut entry: LogEntry) -> LogEntry {
         for sensitive_field in &self.config.sensitive_fields {
             if entry.fields.contains_key(sensitive_field) {
-                entry.fields.insert(sensitive_field.clone(), serde_json::Value::String("[REDACTED]".to_string()));
+                entry.fields.insert(
+                    sensitive_field.clone(),
+                    serde_json::Value::String("[REDACTED]".to_string()),
+                );
             }
         }
         entry
@@ -486,7 +500,10 @@ impl LoggingSystem {
         }
     }
 
-    pub fn get_security_events(&self, severity_filter: Option<SecuritySeverity>) -> Vec<SecurityEvent> {
+    pub fn get_security_events(
+        &self,
+        severity_filter: Option<SecuritySeverity>,
+    ) -> Vec<SecurityEvent> {
         if let Ok(logger) = self.security_logger.lock() {
             logger.get_events(severity_filter)
         } else {
@@ -512,11 +529,11 @@ impl LoggingSystem {
                     timestamp: Utc::now(),
                 };
                 Ok(serde_json::to_string_pretty(&export)?)
-            },
+            }
             LogExportFormat::Csv => {
                 // Implement CSV export logic
                 Ok("CSV export not yet implemented".to_string())
-            },
+            }
         }
     }
 }
@@ -551,14 +568,16 @@ pub enum LogExportFormat {
 }
 
 /// Custom tracing layer for advanced logging features
+#[allow(dead_code)]
 struct CustomLayer {
     logging_system: LoggingSystem,
     recursion_guard: std::cell::RefCell<bool>,
 }
 
+#[allow(dead_code)]
 impl CustomLayer {
     fn new(logging_system: LoggingSystem) -> Self {
-        Self { 
+        Self {
             logging_system,
             recursion_guard: std::cell::RefCell::new(false),
         }
@@ -574,30 +593,32 @@ where
         if *self.recursion_guard.borrow() {
             return;
         }
-        
+
         // Set the guard
         *self.recursion_guard.borrow_mut() = true;
-        
+
         // Extract event information and create structured log entry
         let mut visitor = EventVisitor::new();
         event.record(&mut visitor);
 
-        if let Some(entry) = visitor.into_log_entry() {
+        if let Some(_entry) = visitor.into_log_entry() {
             // Don't call log_structured as it would create a new tracing event
             // Instead, just store the entry or process it without creating new events
             // For now, we'll skip the structured logging to avoid recursion
         }
-        
+
         // Clear the guard
         *self.recursion_guard.borrow_mut() = false;
     }
 }
 
+#[allow(dead_code)]
 struct EventVisitor {
     fields: HashMap<String, serde_json::Value>,
     message: Option<String>,
 }
 
+#[allow(dead_code)]
 impl EventVisitor {
     fn new() -> Self {
         Self {
@@ -609,7 +630,7 @@ impl EventVisitor {
     fn into_log_entry(self) -> Option<LogEntry> {
         Some(LogEntry {
             timestamp: Utc::now(),
-            level: LogLevel::Info, // Would extract from event metadata
+            level: LogLevel::Info,         // Would extract from event metadata
             module: "unknown".to_string(), // Would extract from event metadata
             message: self.message.unwrap_or_else(|| "No message".to_string()),
             correlation_id: None,
@@ -625,14 +646,20 @@ impl EventVisitor {
 
 impl Visit for EventVisitor {
     fn record_debug(&mut self, field: &Field, value: &dyn std::fmt::Debug) {
-        self.fields.insert(field.name().to_string(), serde_json::Value::String(format!("{:?}", value)));
+        self.fields.insert(
+            field.name().to_string(),
+            serde_json::Value::String(format!("{:?}", value)),
+        );
     }
 
     fn record_str(&mut self, field: &Field, value: &str) {
         if field.name() == "message" {
             self.message = Some(value.to_string());
         } else {
-            self.fields.insert(field.name().to_string(), serde_json::Value::String(value.to_string()));
+            self.fields.insert(
+                field.name().to_string(),
+                serde_json::Value::String(value.to_string()),
+            );
         }
     }
 }
@@ -648,7 +675,7 @@ impl AuditLogger {
 
     fn log_entry(&mut self, entry: AuditEntry) {
         self.entries.push(entry);
-        
+
         // Keep only recent entries based on retention policy
         if self.entries.len() > 10000 {
             self.entries.remove(0);
@@ -673,7 +700,7 @@ impl SecurityLogger {
 
     fn log_event(&mut self, event: SecurityEvent) {
         self.events.push(event);
-        
+
         // Keep only recent events
         if self.events.len() > 5000 {
             self.events.remove(0);
@@ -682,7 +709,9 @@ impl SecurityLogger {
 
     fn get_events(&self, severity_filter: Option<SecuritySeverity>) -> Vec<SecurityEvent> {
         match severity_filter {
-            Some(filter_severity) => self.events.iter()
+            Some(filter_severity) => self
+                .events
+                .iter()
                 .filter(|e| e.severity == filter_severity)
                 .cloned()
                 .collect(),
@@ -715,7 +744,7 @@ impl PerformanceLogger {
 
     fn log_entry(&mut self, entry: PerformanceEntry) {
         self.entries.push(entry);
-        
+
         // Keep only recent entries
         if self.entries.len() > 10000 {
             self.entries.remove(0);
@@ -728,14 +757,15 @@ impl PerformanceLogger {
         }
 
         let total_operations = self.entries.len() as u64;
-        let average_duration = self.entries.iter()
-            .map(|e| e.duration_ms)
-            .sum::<u64>() as f64 / total_operations as f64;
+        let average_duration = self.entries.iter().map(|e| e.duration_ms).sum::<u64>() as f64
+            / total_operations as f64;
 
         let error_count = self.entries.iter().filter(|e| e.error_occurred).count();
         let error_rate = error_count as f64 / total_operations as f64 * 100.0;
 
-        let mut operations_by_duration: Vec<_> = self.entries.iter()
+        let mut operations_by_duration: Vec<_> = self
+            .entries
+            .iter()
             .map(|e| (e.operation.clone(), e.duration_ms))
             .collect();
         operations_by_duration.sort_by(|a, b| b.1.cmp(&a.1));
@@ -907,7 +937,7 @@ mod tests {
         };
 
         logging_system.log_audit(audit_entry);
-        
+
         let logs = logging_system.get_audit_logs(Some(10));
         assert_eq!(logs.len(), 1);
     }
@@ -931,7 +961,7 @@ mod tests {
         };
 
         logging_system.log_performance(perf_entry);
-        
+
         let stats = logging_system.get_performance_stats();
         assert_eq!(stats.total_operations, 1);
         assert_eq!(stats.average_duration_ms, 1500.0);
@@ -955,11 +985,17 @@ mod tests {
         // This test ensures that logging within logging doesn't cause stack overflow
         let config = LoggingConfig::default();
         let logging_system = LoggingSystem::new(config).unwrap();
-        
+
         // Try to log multiple times in a way that could cause recursion
         // Also test with different log levels to ensure all paths work
         for i in 0..20 {
-            for level in [LogLevel::Trace, LogLevel::Debug, LogLevel::Info, LogLevel::Warn, LogLevel::Error] {
+            for level in [
+                LogLevel::Trace,
+                LogLevel::Debug,
+                LogLevel::Info,
+                LogLevel::Warn,
+                LogLevel::Error,
+            ] {
                 let entry = LogEntry {
                     timestamp: Utc::now(),
                     level,
@@ -973,11 +1009,11 @@ mod tests {
                     error: None,
                     performance: None,
                 };
-                
+
                 logging_system.log_structured(entry);
             }
         }
-        
+
         // If we get here without stack overflow, the test passes
         assert!(true);
     }
@@ -988,8 +1024,14 @@ mod tests {
         let logging_system = LoggingSystem::new(config).unwrap();
 
         let mut fields = HashMap::new();
-        fields.insert("user_name".to_string(), serde_json::Value::String("john".to_string()));
-        fields.insert("password".to_string(), serde_json::Value::String("secret123".to_string()));
+        fields.insert(
+            "user_name".to_string(),
+            serde_json::Value::String("john".to_string()),
+        );
+        fields.insert(
+            "password".to_string(),
+            serde_json::Value::String("secret123".to_string()),
+        );
 
         let entry = LogEntry {
             timestamp: Utc::now(),
@@ -1006,7 +1048,13 @@ mod tests {
         };
 
         let filtered = logging_system.filter_sensitive_fields(entry);
-        assert_eq!(filtered.fields["password"], serde_json::Value::String("[REDACTED]".to_string()));
-        assert_eq!(filtered.fields["user_name"], serde_json::Value::String("john".to_string()));
+        assert_eq!(
+            filtered.fields["password"],
+            serde_json::Value::String("[REDACTED]".to_string())
+        );
+        assert_eq!(
+            filtered.fields["user_name"],
+            serde_json::Value::String("john".to_string())
+        );
     }
 }

@@ -1,64 +1,46 @@
 //! # BriefXAI
 //!
-//! BriefXAI is a production-ready platform for analyzing AI conversations at scale,
-//! extracting insights, identifying patterns, and visualizing conversation clusters.
+//! High-performance conversation analysis platform for extracting insights from AI conversations.
 //!
-//! ## Features
+//! ## Architecture Overview
 //!
-//! - **Smart Analysis** - Extract facets, sentiments, and patterns automatically
-//! - **High Performance** - Process thousands of conversations concurrently
-//! - **Pause/Resume** - Stop and resume long-running analyses
-//! - **Multi-Provider** - Support for OpenAI, Ollama, and other LLM providers
-//! - **Real-time Results** - Stream insights via WebSocket
-//! - **Data Privacy** - PII detection and local processing options
+//! BriefXAI is organized into several core modules:
+//! - **Analysis Pipeline**: Orchestrates the complete analysis workflow
+//! - **Data Processing**: Handles preprocessing, validation, and transformation
+//! - **Machine Learning**: Clustering, embeddings, and pattern detection
+//! - **Integration Layer**: LLM providers and external services
+//! - **Web Interface**: REST API and WebSocket endpoints
 //!
-//! ## Quick Start
+//! ## Example Usage
 //!
 //! ```rust,no_run
-//! use briefxai::{BriefXAIConfig, analyze_conversations};
+//! use briefx::{BriefXAIConfig, types::ConversationData};
 //!
 //! #[tokio::main]
-//! async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     // Load configuration
-//!     let config = BriefXAIConfig::from_file("config.toml")?;
-//!     
-//!     // Analyze conversations
-//!     let results = analyze_conversations("conversations.json", &config).await?;
-//!     
-//!     // Process results
-//!     println!("Found {} clusters", results.clusters.len());
-//!     
+//! async fn main() -> anyhow::Result<()> {
+//!     let config = BriefXAIConfig::default();
+//!     // Application logic here
 //!     Ok(())
 //! }
 //! ```
-//!
-//! ## Modules
-//!
-//! - [`types`] - Core data types and structures
-//! - [`config`] - Configuration management
-//! - [`analysis`] - Analysis engine and session management
-//! - [`preprocessing`] - Data validation and preprocessing
-//! - [`llm`] - LLM provider integrations
-//! - [`web`] - Web server and API endpoints
-//! - [`clustering`] - Clustering algorithms
-//! - [`embeddings`] - Embedding generation
-//! - [`facets`] - Facet extraction
 
-pub mod types;
-pub mod types_extended;
 pub mod config;
 pub mod embeddings;
+pub mod types;
+pub mod types_extended;
+// pub mod clio_core;
+// pub mod clio_api;
 pub mod clustering;
+pub mod examples;
 pub mod facets;
 pub mod llm;
-pub mod umap;
-pub mod web;
-pub mod web_clio;
-pub mod utils;
-pub mod prompts;
-pub mod examples;
 pub mod persistence;
 pub mod persistence_v2;
+pub mod prompts;
+pub mod umap;
+pub mod utils;
+pub mod web;
+pub mod web_clio;
 
 /// Analysis module containing session management and streaming capabilities
 pub mod analysis {
@@ -90,16 +72,16 @@ pub mod discovery {
 }
 
 pub mod analysis_integration;
-pub mod monitoring;
 pub mod error_recovery;
 pub mod logging;
+pub mod monitoring;
 
 use anyhow::Result;
 use std::path::Path;
 
 // Re-export main types for convenience
 pub use config::BriefXAIConfig;
-pub use types::{Facet, FacetValue, ConversationData, ConversationCluster, BriefXAIResults};
+pub use types::{BriefXAIResults, ConversationCluster, ConversationData, Facet, FacetValue};
 
 /// Analyzes conversations from a file and returns results
 ///
@@ -115,7 +97,7 @@ pub use types::{Facet, FacetValue, ConversationData, ConversationCluster, BriefX
 /// # Examples
 ///
 /// ```rust,no_run
-/// use briefxai::{analyze_conversations, BriefXAIConfig};
+/// use briefx::{analyze_conversations, BriefXAIConfig};
 ///
 /// #[tokio::main]
 /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -125,8 +107,8 @@ pub use types::{Facet, FacetValue, ConversationData, ConversationCluster, BriefX
 /// }
 /// ```
 pub async fn analyze_conversations(
-    file_path: impl AsRef<Path>,
-    config: &BriefXAIConfig,
+    _file_path: impl AsRef<Path>,
+    _config: &BriefXAIConfig,
 ) -> Result<BriefXAIResults> {
     // Implementation would go here
     // This is a placeholder that would integrate with the actual analysis pipeline
@@ -143,10 +125,7 @@ pub async fn analyze_conversations(
 /// # Returns
 ///
 /// Returns a session ID that can be used to track the analysis
-pub async fn create_session(
-    name: &str,
-    config: &BriefXAIConfig,
-) -> Result<String> {
+pub async fn create_session(_name: &str, _config: &BriefXAIConfig) -> Result<String> {
     // Implementation would go here
     todo!("Implement session creation")
 }
@@ -160,7 +139,7 @@ pub async fn create_session(
 /// # Returns
 ///
 /// Returns Ok(()) if the session was successfully resumed
-pub async fn resume_session(session_id: &str) -> Result<()> {
+pub async fn resume_session(_session_id: &str) -> Result<()> {
     // Implementation would go here
     todo!("Implement session resumption")
 }

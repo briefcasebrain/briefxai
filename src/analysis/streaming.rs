@@ -1,12 +1,12 @@
 use anyhow::Result;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tokio::sync::{broadcast, RwLock};
-use tracing::{info, debug};
 use std::time::Instant;
+use tokio::sync::{broadcast, RwLock};
+use tracing::{debug, info};
 
-use crate::types::{ConversationCluster, FacetValue};
 use crate::persistence_v2::ResultType;
+use crate::types::{ConversationCluster, FacetValue};
 
 // ============================================================================
 // Streaming Types
@@ -81,39 +81,39 @@ impl ResultAggregator {
             total_expected,
         }
     }
-    
+
     pub async fn add_facets(&self, facets: Vec<Vec<FacetValue>>) {
         let mut all_facets = self.facets.write().await;
         all_facets.extend(facets);
     }
-    
+
     pub async fn add_clusters(&self, clusters: Vec<ConversationCluster>) {
         let mut all_clusters = self.clusters.write().await;
-        *all_clusters = clusters;  // Replace rather than extend for clusters
+        *all_clusters = clusters; // Replace rather than extend for clusters
     }
-    
+
     pub async fn add_insight(&self, insight: Insight) {
         let mut insights = self.insights.write().await;
         insights.push(insight);
     }
-    
+
     pub async fn increment_embeddings(&self, count: usize) {
         let mut embeddings_count = self.embeddings_count.write().await;
         *embeddings_count += count;
     }
-    
+
     pub async fn get_partial_results(&self) -> PartialResults {
         let facets = self.facets.read().await.clone();
         let clusters = self.clusters.read().await.clone();
         let insights = self.insights.read().await.clone();
         let embeddings_count = *self.embeddings_count.read().await;
-        
+
         let completion_percentage = if self.total_expected > 0 {
             (facets.len() as f32 / self.total_expected as f32) * 100.0
         } else {
             0.0
         };
-        
+
         PartialResults {
             facets,
             clusters,
@@ -122,47 +122,51 @@ impl ResultAggregator {
             completion_percentage,
         }
     }
-    
+
     pub async fn detect_early_insights(&self) -> Vec<Insight> {
         let facets = self.facets.read().await;
         let mut insights = Vec::new();
-        
+
         // Detect common patterns
         if facets.len() >= 10 {
             insights.extend(self.detect_common_patterns(&facets).await);
         }
-        
+
         // Detect trends
         if facets.len() >= 20 {
             insights.extend(self.detect_trends(&facets).await);
         }
-        
+
         insights
     }
-    
+
     async fn detect_common_patterns(&self, facets: &[Vec<FacetValue>]) -> Vec<Insight> {
         let mut insights = Vec::new();
-        
+
         // Count facet value frequencies
-        let mut value_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
-        
+        let mut value_counts: std::collections::HashMap<String, usize> =
+            std::collections::HashMap::new();
+
         for facet_set in facets {
             for facet_value in facet_set {
                 *value_counts.entry(facet_value.value.clone()).or_insert(0) += 1;
             }
         }
-        
+
         // Find most common values
         let mut common_values: Vec<_> = value_counts.iter().collect();
         common_values.sort_by_key(|(_, count)| std::cmp::Reverse(**count));
-        
+
         if let Some((value, count)) = common_values.first() {
             if **count > facets.len() / 3 {
                 insights.push(Insight {
                     insight_type: InsightType::PatternDiscovered,
                     title: "Common Pattern Detected".to_string(),
-                    description: format!("'{}' appears in {}% of conversations", 
-                        value, (**count * 100) / facets.len()),
+                    description: format!(
+                        "'{}' appears in {}% of conversations",
+                        value,
+                        (**count * 100) / facets.len()
+                    ),
                     confidence: 0.8,
                     supporting_data: serde_json::json!({
                         "value": value,
@@ -172,38 +176,38 @@ impl ResultAggregator {
                 });
             }
         }
-        
+
         insights
     }
-    
+
     async fn detect_trends(&self, facets: &[Vec<FacetValue>]) -> Vec<Insight> {
         let mut insights = Vec::new();
-        
+
         // Simple trend detection - check if certain values are increasing
         let window_size = 10;
         if facets.len() >= window_size * 2 {
             let first_half = &facets[..facets.len() / 2];
             let second_half = &facets[facets.len() / 2..];
-            
+
             let mut first_counts = std::collections::HashMap::new();
             let mut second_counts = std::collections::HashMap::new();
-            
+
             for facet_set in first_half {
                 for facet_value in facet_set {
                     *first_counts.entry(facet_value.value.clone()).or_insert(0) += 1;
                 }
             }
-            
+
             for facet_set in second_half {
                 for facet_value in facet_set {
                     *second_counts.entry(facet_value.value.clone()).or_insert(0) += 1;
                 }
             }
-            
+
             // Find values that increased significantly
             for (value, second_count) in second_counts {
                 let first_count = first_counts.get(&value).unwrap_or(&0);
-                
+
                 if second_count > first_count * 2 && second_count > 5 {
                     insights.push(Insight {
                         insight_type: InsightType::TrendIdentified,
@@ -220,7 +224,7 @@ impl ResultAggregator {
                 }
             }
         }
-        
+
         insights
     }
 }
@@ -241,16 +245,16 @@ impl StreamingAnalyzer {
         persistence: Arc<crate::persistence_v2::EnhancedPersistenceLayer>,
     ) -> (Self, broadcast::Receiver<StreamingUpdate>) {
         let (sender, receiver) = broadcast::channel(1000);
-        
+
         let analyzer = Self {
             result_sender: sender,
             aggregator: Arc::new(ResultAggregator::new(total_conversations)),
             persistence,
         };
-        
+
         (analyzer, receiver)
     }
-    
+
     pub async fn process_batch_streaming(
         &self,
         batch_number: i32,
@@ -258,61 +262,86 @@ impl StreamingAnalyzer {
         embeddings: Vec<Vec<f32>>,
     ) -> Result<()> {
         debug!("Processing batch {} with streaming", batch_number);
-        
+
         // Add facets
         self.aggregator.add_facets(facets.clone()).await;
-        self.send_update(UpdateType::FacetExtracted, Some(batch_number), serde_json::json!({
-            "count": facets.len()
-        })).await?;
-        
+        self.send_update(
+            UpdateType::FacetExtracted,
+            Some(batch_number),
+            serde_json::json!({
+                "count": facets.len()
+            }),
+        )
+        .await?;
+
         // Add embeddings count
         self.aggregator.increment_embeddings(embeddings.len()).await;
-        self.send_update(UpdateType::EmbeddingGenerated, Some(batch_number), serde_json::json!({
-            "count": embeddings.len()
-        })).await?;
-        
+        self.send_update(
+            UpdateType::EmbeddingGenerated,
+            Some(batch_number),
+            serde_json::json!({
+                "count": embeddings.len()
+            }),
+        )
+        .await?;
+
         // Check for early insights
         let insights = self.aggregator.detect_early_insights().await;
         for insight in insights {
             self.aggregator.add_insight(insight.clone()).await;
-            self.send_update(UpdateType::InsightDiscovered, Some(batch_number), 
-                serde_json::to_value(&insight)?).await?;
+            self.send_update(
+                UpdateType::InsightDiscovered,
+                Some(batch_number),
+                serde_json::to_value(&insight)?,
+            )
+            .await?;
         }
-        
+
         // Store partial results
-        self.persistence.store_partial_result(
-            "current_session",  // This would be the actual session ID
-            Some(batch_number),
-            ResultType::Facet,
-            serde_json::to_value(&facets)?,
-        ).await?;
-        
+        self.persistence
+            .store_partial_result(
+                "current_session", // This would be the actual session ID
+                Some(batch_number),
+                ResultType::Facet,
+                serde_json::to_value(&facets)?,
+            )
+            .await?;
+
         // Send partial result ready notification
         let partial = self.aggregator.get_partial_results().await;
-        self.send_update(UpdateType::PartialResultReady, Some(batch_number), 
-            serde_json::to_value(&partial)?).await?;
-        
+        self.send_update(
+            UpdateType::PartialResultReady,
+            Some(batch_number),
+            serde_json::to_value(&partial)?,
+        )
+        .await?;
+
         Ok(())
     }
-    
+
     pub async fn get_partial_results(&self) -> PartialResults {
         self.aggregator.get_partial_results().await
     }
-    
+
     pub async fn get_early_insights(&self) -> Vec<Insight> {
         self.aggregator.insights.read().await.clone()
     }
-    
+
     pub async fn finalize_clusters(&self, clusters: Vec<ConversationCluster>) -> Result<()> {
         self.aggregator.add_clusters(clusters.clone()).await;
-        
-        self.send_update(UpdateType::ClusterFormed, None, serde_json::json!({
-            "cluster_count": clusters.len()
-        })).await?;
-        
+
+        self.send_update(
+            UpdateType::ClusterFormed,
+            None,
+            serde_json::json!({
+                "cluster_count": clusters.len()
+            }),
+        )
+        .await?;
+
         Ok(())
     }
-    
+
     async fn send_update(
         &self,
         update_type: UpdateType,
@@ -325,10 +354,10 @@ impl StreamingAnalyzer {
             batch_number,
             data,
         };
-        
+
         // Ignore send errors (no receivers)
         let _ = self.result_sender.send(update);
-        
+
         Ok(())
     }
 }
@@ -337,8 +366,7 @@ impl StreamingAnalyzer {
 // WebSocket Handler for Streaming
 // ============================================================================
 
-use axum::extract::ws::{WebSocket, Message};
-use futures::{stream::StreamExt, SinkExt};
+use axum::extract::ws::{Message, WebSocket};
 
 pub async fn handle_streaming_websocket(
     mut socket: WebSocket,
@@ -379,7 +407,7 @@ pub async fn handle_streaming_websocket(
             }
         }
     }
-    
+
     info!("WebSocket connection closed");
 }
 
@@ -392,12 +420,8 @@ pub async fn export_partial_results(
     format: ExportFormat,
 ) -> Result<Vec<u8>> {
     match format {
-        ExportFormat::Json => {
-            Ok(serde_json::to_vec_pretty(results)?)
-        }
-        ExportFormat::Csv => {
-            export_to_csv(results).await
-        }
+        ExportFormat::Json => Ok(serde_json::to_vec_pretty(results)?),
+        ExportFormat::Csv => export_to_csv(results).await,
     }
 }
 
@@ -409,24 +433,29 @@ pub enum ExportFormat {
 
 async fn export_to_csv(results: &PartialResults) -> Result<Vec<u8>> {
     use std::io::Write;
-    
+
     let mut buffer = Vec::new();
     writeln!(buffer, "Type,Data,Count")?;
-    
+
     writeln!(buffer, "Facets,Extracted,{}", results.facets.len())?;
     writeln!(buffer, "Clusters,Formed,{}", results.clusters.len())?;
     writeln!(buffer, "Insights,Discovered,{}", results.insights.len())?;
     writeln!(buffer, "Embeddings,Generated,{}", results.embeddings_count)?;
-    writeln!(buffer, "Completion,Percentage,{:.1}", results.completion_percentage)?;
-    
+    writeln!(
+        buffer,
+        "Completion,Percentage,{:.1}",
+        results.completion_percentage
+    )?;
+
     // Add insights details
     writeln!(buffer, "\nInsights:")?;
     for insight in &results.insights {
-        writeln!(buffer, "\"{}\",\"{}\",{:.2}", 
-            insight.title, 
-            insight.description, 
-            insight.confidence)?;
+        writeln!(
+            buffer,
+            "\"{}\",\"{}\",{:.2}",
+            insight.title, insight.description, insight.confidence
+        )?;
     }
-    
+
     Ok(buffer)
 }
