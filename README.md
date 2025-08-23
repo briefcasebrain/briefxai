@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Rust](https://img.shields.io/badge/rust-%23000000.svg?style=flat&logo=rust&logoColor=white)](https://www.rust-lang.org/)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/briefcasebrain/briefx)
+[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/briefcasebrain/briefxaiai)
 
 A high-performance conversation analysis platform built in Rust, designed for extracting insights from conversations at scale.
 
@@ -37,7 +37,7 @@ BriefX provides enterprise-grade conversation analysis capabilities with a focus
 ### Building from Source
 
 ```bash
-git clone https://github.com/briefcasebrain/briefx.git
+git clone https://github.com/briefcasebrain/briefxai.git
 cd briefx
 cargo build --release
 ```
@@ -51,20 +51,20 @@ cargo build --release
 export OPENAI_API_KEY="your-key-here"
 
 # Start the server
-./target/release/briefxai ui --port 8080
+./target/release/briefx ui --port 8080
 ```
 
 ### Command Line Interface
 
 ```bash
 # Analyze conversations from file
-./target/release/briefxai analyze -i data.json -o results/
+./target/release/briefx analyze -i data.json -o results/
 
 # Generate example data
-./target/release/briefxai example -n 100 -o sample_data.json
+./target/release/briefx example -n 100 -o sample_data.json
 
 # Serve existing results
-./target/release/briefxai serve -d results/
+./target/release/briefx serve -d results/
 ```
 
 ## Configuration
@@ -144,6 +144,10 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Built with the Rust ecosystem
 - Powered by modern LLM APIs
 
+## Deployment
+
+See the [deployment documentation](docs/deployment/) for instructions on deploying to cloud platforms.
+
 ## Support
 
-For issues and questions, please use the [GitHub issue tracker](https://github.com/yourusername/briefxai/issues).
+For issues and questions, please use the [GitHub issue tracker](https://github.com/briefcasebrain/briefxai/issues).

@@ -1,5 +1,5 @@
 # Simple Dockerfile for Cloud Run deployment
-FROM rust:1.75-slim AS builder
+FROM rust:latest AS builder
 
 WORKDIR /app
 
@@ -10,12 +10,11 @@ COPY . .
 RUN cargo build --release
 
 # Runtime stage
-FROM debian:bookworm-slim
+FROM ubuntu:24.04
 
 # Install runtime dependencies
 RUN apt-get update && apt-get install -y \
     ca-certificates \
-    libssl3 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy binary

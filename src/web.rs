@@ -524,8 +524,8 @@ pub async fn serve_website(config: BriefXAIConfig, output_dir: PathBuf) -> Resul
         .nest_service("/static", ServeDir::new(output_dir.join("static")))
         .nest_service("/data", ServeDir::new(output_dir.join("data")));
 
-    let addr = format!("127.0.0.1:{}", config.website_port);
-    info!("Starting web server at http://{}", addr);
+    let addr = format!("0.0.0.0:{}", config.website_port);
+    info!("Starting web server at http://localhost:{}", config.website_port);
 
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     axum::serve(listener, app).await?;
@@ -559,7 +559,7 @@ pub async fn serve_interactive_ui(config: BriefXAIConfig, ui_dir: PathBuf) -> Re
         .layer(tower_http::cors::CorsLayer::permissive())
         .with_state(Arc::new(config));
 
-    let addr = format!("127.0.0.1:{}", port);
+    let addr = format!("0.0.0.0:{}", port);
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     axum::serve(listener, app).await?;
 

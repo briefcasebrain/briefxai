@@ -244,12 +244,13 @@ gen/
 !.gitlab-ci.yml
 !.travis.yml
 
-# Deployment
-DEPLOYMENT_STATUS.md
-Dockerfile
-Dockerfile.original
-fix_critical_issues.sh
-deploy-cloud-run-free-tier.md
-deploy-simple.sh
-deploy-steps.sh
-cloudbuild.yaml
+# Deployment and infrastructure
+deployment/
+.env.cloudrun
+.env.free-tier
+scripts/briefx-proxy.py
+scripts/setup-gmail-access.sh
+scripts/start-briefx.sh
+scripts/access-briefx.html
+docs/deployment/DEPLOYMENT_STATUS.md
+docs/deployment/COST_OPTIMIZATION.md
