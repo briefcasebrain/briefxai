@@ -243,3 +243,13 @@ gen/
 !.github/
 !.gitlab-ci.yml
 !.travis.yml
+
+# Deployment
+DEPLOYMENT_STATUS.md
+Dockerfile
+Dockerfile.original
+fix_critical_issues.sh
+deploy-cloud-run-free-tier.md
+deploy-simple.sh
+deploy-steps.sh
+cloudbuild.yaml

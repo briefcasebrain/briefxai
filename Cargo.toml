@@ -104,9 +104,9 @@ quickcheck = "1.0"
 async-trait = "0.1"
 mockall = "0.12"
 
-[[bench]]
-name = "performance"
-harness = false
+# [[bench]]
+# name = "performance"
+# harness = false
 
 [profile.release]
 opt-level = 3
