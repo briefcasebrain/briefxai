@@ -8,8 +8,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY app.py .
-COPY config.py .
-COPY src/ ./src/
 
 # Copy UI files
 COPY briefxai_ui_data ./briefxai_ui_data

@@ -2,7 +2,7 @@ use anyhow::Result;
 use briefx::{types::ConversationData, BriefXAIConfig};
 use clap::{Parser, Subcommand};
 use serde_json;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tokio::fs;
 use tracing::{info, Level};
 use tracing_subscriber;
@@ -167,17 +167,9 @@ async fn generate_interactive_ui(output_dir: &PathBuf) -> Result<()> {
     let static_dir = output_dir.join("static");
     fs::create_dir_all(&static_dir).await?;
 
-    // Create the main interactive UI HTML
-    let index_html = include_str!("../assets/interactive_ui.html");
+    // Use the clean embedded UI
+    let index_html = include_str!("../assets/clean_ui.html");
     fs::write(output_dir.join("index.html"), index_html).await?;
-
-    // Create the CSS
-    let css = include_str!("../assets/interactive_ui.css");
-    fs::write(static_dir.join("style.css"), css).await?;
-
-    // Create the JavaScript
-    let js = include_str!("../assets/interactive_ui.js");
-    fs::write(static_dir.join("app.js"), js).await?;
 
     Ok(())
 }

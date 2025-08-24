@@ -542,6 +542,7 @@ pub async fn serve_interactive_ui(config: BriefXAIConfig, ui_dir: PathBuf) -> Re
         .route("/api/health", get(health_endpoint))
         .route("/api/analyze", post(analyze_endpoint))
         .route("/api/upload", post(upload_endpoint))
+        .route("/api/process", post(process_conversations_endpoint))
         .route("/api/example-data", get(example_data_endpoint))
         .route("/api/example", get(example_endpoint))
         .route("/api/status", get(status_endpoint))
@@ -1507,6 +1508,199 @@ async fn upload_endpoint(mut multipart: Multipart) -> impl IntoResponse {
             data: None,
             error: Some("No files were uploaded".to_string()),
         })
+    }
+}
+
+// New endpoint to process uploaded conversations into the expected format
+#[derive(Deserialize)]
+struct ProcessRequest {
+    conversations: Vec<crate::types::ConversationData>,
+}
+
+async fn process_conversations_endpoint(
+    AxumJson(request): AxumJson<ProcessRequest>,
+) -> impl IntoResponse {
+    let conversations = request.conversations;
+    
+    if conversations.is_empty() {
+        return AxumJson(ApiResponse {
+            success: false,
+            data: None::<serde_json::Value>,
+            error: Some("No conversations provided".to_string()),
+        });
+    }
+    
+    // Extract basic patterns and clusters from conversations
+    let clusters = extract_basic_clusters(&conversations);
+    
+    // Calculate basic statistics
+    let total_messages: usize = conversations.iter().map(|c| c.messages.len()).sum();
+    let avg_messages = if !conversations.is_empty() {
+        total_messages / conversations.len()
+    } else {
+        0
+    };
+    
+    // Transform conversations to include sentiment and categories
+    let processed_conversations: Vec<serde_json::Value> = conversations
+        .iter()
+        .enumerate()
+        .map(|(i, conv)| {
+            let text = conv.messages
+                .iter()
+                .map(|m| m.content.clone())
+                .collect::<Vec<_>>()
+                .join(" ");
+            
+            // Simple sentiment analysis based on keywords
+            let sentiment = calculate_simple_sentiment(&text);
+            
+            // Determine category based on content
+            let category = determine_category(&text);
+            
+            serde_json::json!({
+                "id": i + 1,
+                "text": text.chars().take(200).collect::<String>(),
+                "category": category,
+                "sentiment": sentiment,
+                "timestamp": chrono::Utc::now().timestamp_millis() - (i as i64 * 3600000),
+                "messages": conv.messages.len(),
+            })
+        })
+        .collect();
+    
+    // Return data in the format expected by the frontend
+    AxumJson(ApiResponse {
+        success: true,
+        data: Some(serde_json::json!({
+            "conversations": processed_conversations,
+            "clusters": clusters,
+            "statistics": {
+                "total_conversations": conversations.len(),
+                "total_messages": total_messages,
+                "avg_messages": avg_messages,
+            }
+        })),
+        error: None,
+    })
+}
+
+// Helper function to extract basic clusters from conversations
+fn extract_basic_clusters(conversations: &[crate::types::ConversationData]) -> Vec<serde_json::Value> {
+    use std::collections::HashMap;
+    
+    let mut category_counts: HashMap<String, usize> = HashMap::new();
+    
+    // Count conversations by category
+    for conv in conversations {
+        let text = conv.messages
+            .iter()
+            .map(|m| m.content.clone())
+            .collect::<Vec<_>>()
+            .join(" ");
+        
+        let category = determine_category(&text);
+        *category_counts.entry(category).or_insert(0) += 1;
+    }
+    
+    // Convert to cluster format
+    let mut clusters: Vec<serde_json::Value> = category_counts
+        .into_iter()
+        .enumerate()
+        .map(|(id, (name, count))| {
+            let description = match name.as_str() {
+                "Support" => "Customer support and technical assistance requests",
+                "Feature Request" => "User suggestions for new features and improvements",
+                "Bug Report" => "Technical issues and system problems",
+                "Feedback" => "User feedback and testimonials",
+                "Sales" => "Pricing inquiries and subscription questions",
+                "Documentation" => "Documentation and API reference requests",
+                _ => "General conversation topics",
+            };
+            
+            serde_json::json!({
+                "id": id + 1,
+                "name": name,
+                "count": count,
+                "description": description,
+            })
+        })
+        .collect();
+    
+    // Ensure we have at least some clusters
+    if clusters.is_empty() {
+        clusters.push(serde_json::json!({
+            "id": 1,
+            "name": "General",
+            "count": conversations.len(),
+            "description": "General conversation topics",
+        }));
+    }
+    
+    clusters
+}
+
+// Helper function to determine conversation category
+fn determine_category(text: &str) -> String {
+    let text_lower = text.to_lowercase();
+    
+    if text_lower.contains("bug") || text_lower.contains("error") || text_lower.contains("crash") 
+        || text_lower.contains("broken") || text_lower.contains("fix") {
+        "Bug Report".to_string()
+    } else if text_lower.contains("feature") || text_lower.contains("request") 
+        || text_lower.contains("add") || text_lower.contains("implement") {
+        "Feature Request".to_string()
+    } else if text_lower.contains("help") || text_lower.contains("support") 
+        || text_lower.contains("issue") || text_lower.contains("problem") {
+        "Support".to_string()
+    } else if text_lower.contains("thank") || text_lower.contains("great") 
+        || text_lower.contains("love") || text_lower.contains("awesome") {
+        "Feedback".to_string()
+    } else if text_lower.contains("price") || text_lower.contains("cost") 
+        || text_lower.contains("subscription") || text_lower.contains("pay") {
+        "Sales".to_string()
+    } else if text_lower.contains("document") || text_lower.contains("api") 
+        || text_lower.contains("guide") || text_lower.contains("tutorial") {
+        "Documentation".to_string()
+    } else {
+        "General".to_string()
+    }
+}
+
+// Helper function to calculate simple sentiment
+fn calculate_simple_sentiment(text: &str) -> f64 {
+    let text_lower = text.to_lowercase();
+    
+    // Positive words
+    let positive_words = ["good", "great", "excellent", "amazing", "wonderful", 
+        "fantastic", "love", "perfect", "awesome", "helpful", "thank", "appreciate"];
+    
+    // Negative words  
+    let negative_words = ["bad", "terrible", "awful", "horrible", "hate", "angry",
+        "frustrated", "annoyed", "disappointed", "broken", "error", "crash", "bug"];
+    
+    let mut score = 0.0;
+    let mut word_count = 0;
+    
+    for word in positive_words.iter() {
+        if text_lower.contains(word) {
+            score += 1.0;
+            word_count += 1;
+        }
+    }
+    
+    for word in negative_words.iter() {
+        if text_lower.contains(word) {
+            score -= 1.0;
+            word_count += 1;
+        }
+    }
+    
+    // Normalize to -1.0 to 1.0 range
+    if word_count > 0 {
+        (score / word_count as f64).max(-1.0).min(1.0)
+    } else {
+        0.0 // Neutral if no sentiment words found
     }
 }
 

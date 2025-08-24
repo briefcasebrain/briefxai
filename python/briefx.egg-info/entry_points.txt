@@ -1,0 +1,4 @@
+[console_scripts]
+briefx = briefx.cli:main
+briefx-server = briefx.app:main
+
