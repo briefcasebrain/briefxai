@@ -638,7 +638,8 @@
             <span>BriefX</span>
         </div>
         <div class="nav-tabs">
-            <button class="nav-tab active" data-view="upload">Upload</button>
+            <button class="nav-tab active" data-view="home">Home</button>
+            <button class="nav-tab" data-view="upload">Upload</button>
             <button class="nav-tab" data-view="analysis">Analysis</button>
             <button class="nav-tab" data-view="clio">Clio</button>
             <button class="nav-tab" data-view="patterns">Patterns</button>
@@ -661,8 +662,134 @@
 
     <!-- Main Container -->
     <div class="main-container">
+        <!-- Home/Landing View -->
+        <div class="view-section active" id="homeView">
+            <div class="upload-container" style="max-width: 900px; margin: 0 auto;">
+                <!-- Hero Section -->
+                <div style="text-align: center; margin-bottom: 3rem;">
+                    <div style="font-size: 4rem; margin-bottom: 1rem;">🎯</div>
+                    <h1 style="font-size: 3rem; font-weight: 700; margin-bottom: 1rem; background: linear-gradient(135deg, var(--primary), var(--secondary)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">BriefX</h1>
+                    <p style="font-size: 1.25rem; color: var(--gray); margin-bottom: 2rem; line-height: 1.6;">Intelligent conversation analysis platform that helps you understand patterns, extract insights, and visualize relationships in your conversational data.</p>
+                    
+                    <div style="display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="switchView('upload')" style="font-size: 1.1rem; padding: 1rem 2rem;">
+                            🚀 Get Started
+                        </button>
+                        <button class="btn btn-secondary" onclick="useExampleData()" style="font-size: 1.1rem; padding: 1rem 2rem;">
+                            🎲 Try Demo
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Features Grid -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 2rem; margin-bottom: 3rem;">
+                    <div style="background: var(--white); padding: 2rem; border-radius: 1rem; border: 1px solid #e5e7eb; text-align: center;">
+                        <div style="font-size: 2.5rem; margin-bottom: 1rem;">🤖</div>
+                        <h3 style="margin-bottom: 1rem; color: var(--primary);">Smart Clustering</h3>
+                        <p style="color: var(--gray); line-height: 1.6;">Automatically groups similar conversations to identify patterns and themes using advanced AI techniques.</p>
+                    </div>
+                    
+                    <div style="background: var(--white); padding: 2rem; border-radius: 1rem; border: 1px solid #e5e7eb; text-align: center;">
+                        <div style="font-size: 2.5rem; margin-bottom: 1rem;">🔍</div>
+                        <h3 style="margin-bottom: 1rem; color: var(--primary);">Clio Analysis</h3>
+                        <p style="color: var(--gray); line-height: 1.6;">Privacy-preserving conversation analysis that extracts insights while protecting sensitive information.</p>
+                    </div>
+                    
+                    <div style="background: var(--white); padding: 2rem; border-radius: 1rem; border: 1px solid #e5e7eb; text-align: center;">
+                        <div style="font-size: 2.5rem; margin-bottom: 1rem;">📊</div>
+                        <h3 style="margin-bottom: 1rem; color: var(--primary);">Visual Insights</h3>
+                        <p style="color: var(--gray); line-height: 1.6;">Interactive dashboards and visualizations help you understand patterns and trends at a glance.</p>
+                    </div>
+                </div>
+
+                <!-- How It Works -->
+                <div style="background: var(--white); padding: 2.5rem; border-radius: 1rem; border: 1px solid #e5e7eb; margin-bottom: 3rem;">
+                    <h2 style="text-align: center; margin-bottom: 2rem; color: var(--primary);">How It Works</h2>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem;">
+                        <div style="text-align: center;">
+                            <div style="width: 60px; height: 60px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-weight: bold; font-size: 1.5rem;">1</div>
+                            <h4 style="margin-bottom: 0.5rem;">Upload Data</h4>
+                            <p style="color: var(--gray); font-size: 0.9rem;">Import conversations in JSON, CSV, or text format</p>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="width: 60px; height: 60px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-weight: bold; font-size: 1.5rem;">2</div>
+                            <h4 style="margin-bottom: 0.5rem;">AI Analysis</h4>
+                            <p style="color: var(--gray); font-size: 0.9rem;">Our algorithms cluster and analyze your conversations</p>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="width: 60px; height: 60px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-weight: bold; font-size: 1.5rem;">3</div>
+                            <h4 style="margin-bottom: 0.5rem;">Explore Insights</h4>
+                            <p style="color: var(--gray); font-size: 0.9rem;">Discover patterns through interactive visualizations</p>
+                        </div>
+                        <div style="text-align: center;">
+                            <div style="width: 60px; height: 60px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 1rem; font-weight: bold; font-size: 1.5rem;">4</div>
+                            <h4 style="margin-bottom: 0.5rem;">Export Results</h4>
+                            <p style="color: var(--gray); font-size: 0.9rem;">Download insights for further analysis</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pricing/Options -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; margin-bottom: 3rem;">
+                    <div style="background: var(--white); padding: 2rem; border-radius: 1rem; border: 1px solid #e5e7eb;">
+                        <div style="text-align: center; margin-bottom: 1.5rem;">
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">🆓</div>
+                            <h3 style="color: var(--primary); margin-bottom: 0.5rem;">Demo Mode</h3>
+                            <p style="color: var(--success); font-weight: 600;">Free • No Setup Required</p>
+                        </div>
+                        <ul style="list-style: none; padding: 0; margin-bottom: 1.5rem;">
+                            <li style="padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6;">✅ Rule-based analysis</li>
+                            <li style="padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6;">✅ Basic clustering</li>
+                            <li style="padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6;">✅ All visualizations</li>
+                            <li style="padding: 0.5rem 0;">✅ No API keys needed</li>
+                        </ul>
+                        <button class="btn btn-primary" onclick="useExampleData()" style="width: 100%;">Try Demo</button>
+                    </div>
+                    
+                    <div style="background: var(--white); padding: 2rem; border-radius: 1rem; border: 2px solid var(--primary); position: relative;">
+                        <div style="position: absolute; top: -12px; right: 20px; background: var(--primary); color: white; padding: 0.25rem 1rem; border-radius: 1rem; font-size: 0.8rem; font-weight: 600;">RECOMMENDED</div>
+                        <div style="text-align: center; margin-bottom: 1.5rem;">
+                            <div style="font-size: 2rem; margin-bottom: 0.5rem;">⚡</div>
+                            <h3 style="color: var(--primary); margin-bottom: 0.5rem;">Premium Mode</h3>
+                            <p style="color: var(--primary); font-weight: 600;">Your API Keys • Advanced AI</p>
+                        </div>
+                        <ul style="list-style: none; padding: 0; margin-bottom: 1.5rem;">
+                            <li style="padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6;">🚀 GPT-4, Claude, Gemini</li>
+                            <li style="padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6;">🚀 Advanced embeddings</li>
+                            <li style="padding: 0.5rem 0; border-bottom: 1px solid #f3f4f6;">🚀 Superior accuracy</li>
+                            <li style="padding: 0.5rem 0;">🔐 Your data stays private</li>
+                        </ul>
+                        <button class="btn btn-primary" onclick="switchView('settings')" style="width: 100%;">Configure API Keys</button>
+                    </div>
+                </div>
+
+                <!-- Use Cases -->
+                <div style="background: var(--white); padding: 2.5rem; border-radius: 1rem; border: 1px solid #e5e7eb;">
+                    <h2 style="text-align: center; margin-bottom: 2rem; color: var(--primary);">Perfect For</h2>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem;">
+                        <div>
+                            <h4 style="color: var(--primary); margin-bottom: 0.5rem;">📞 Customer Support</h4>
+                            <p style="color: var(--gray); font-size: 0.9rem;">Analyze support tickets to identify common issues and improve response strategies</p>
+                        </div>
+                        <div>
+                            <h4 style="color: var(--primary); margin-bottom: 0.5rem;">🔬 User Research</h4>
+                            <p style="color: var(--gray); font-size: 0.9rem;">Extract insights from user interviews and feedback sessions</p>
+                        </div>
+                        <div>
+                            <h4 style="color: var(--primary); margin-bottom: 0.5rem;">💼 Team Analytics</h4>
+                            <p style="color: var(--gray); font-size: 0.9rem;">Understand communication patterns within your organization</p>
+                        </div>
+                        <div>
+                            <h4 style="color: var(--primary); margin-bottom: 0.5rem;">📈 Market Research</h4>
+                            <p style="color: var(--gray); font-size: 0.9rem;">Analyze customer conversations to identify trends and opportunities</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Upload View -->
-        <div class="view-section active" id="uploadView">
+        <div class="view-section" id="uploadView">
             <div class="upload-container">
                 <div class="upload-header">
                     <h1>Start Your Analysis</h1>
