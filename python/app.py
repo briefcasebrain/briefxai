@@ -28,6 +28,22 @@ from briefx.examples import generate_example_conversations
 setup_logging(verbose=True, debug=False)
 logger = logging.getLogger(__name__)
 
+# Simple configuration for free deployment
+class Config:
+    def __init__(self):
+        # Use demo provider by default (free, no API keys required)
+        self.llm_provider = "demo"
+        self.llm_model = "demo-analyzer"
+        self.embedding_provider = "openai"  # Will fallback gracefully
+        self.embedding_model = "text-embedding-3-small"
+        
+        # API keys - empty by default for free deployment
+        self.openai_api_key = os.environ.get('OPENAI_API_KEY', '')
+        self.anthropic_api_key = os.environ.get('ANTHROPIC_API_KEY', '')
+        self.gemini_api_key = os.environ.get('GEMINI_API_KEY', '')
+
+config = Config()
+
 # Initialize analysis pipeline
 initialize_pipeline()
 
@@ -52,7 +68,10 @@ async def init_persistence():
         # Fall back to basic session manager
         persistence_manager = None
 
-app = Flask(__name__, static_folder='briefxai_ui_data', static_url_path='')
+# Use different path for Docker vs local development
+# Check if we're running in Docker by looking for /app directory
+static_folder = 'ui' if os.path.exists('/app/ui') else '../ui'
+app = Flask(__name__, static_folder=static_folder, static_url_path='')
 CORS(app)
 
 # Initialize persistence on startup (optional)
@@ -100,13 +119,13 @@ def get_clio_pipeline():
 # Serve the main UI
 @app.route('/')
 def index():
-    return send_from_directory('briefxai_ui_data', 'index.html')
+    return send_from_directory(static_folder, 'index.html')
 
 # Serve static files
 @app.route('/<path:path>')
 def serve_static(path):
-    if os.path.exists(os.path.join('briefxai_ui_data', path)):
-        return send_from_directory('briefxai_ui_data', path)
+    if os.path.exists(os.path.join(static_folder, path)):
+        return send_from_directory(static_folder, path)
     return "Not found", 404
 
 @app.route('/api/health')
@@ -1481,6 +1500,81 @@ def generate_examples():
                 'count': len(conversations)
             }
         })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/providers')
+def get_providers():
+    """Get available LLM providers and their requirements"""
+    try:
+        providers = ProviderFactory.get_available_llm_providers()
+        return jsonify({
+            'success': True,
+            'data': providers
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/settings', methods=['POST'])
+def update_settings():
+    """Update provider settings with user-provided API keys"""
+    try:
+        data = request.json
+        provider = data.get('provider', 'demo')
+        api_key = data.get('api_key', '')
+        model = data.get('model', 'default')
+        
+        # Store settings in session or temporary storage
+        # For demo purposes, we'll recreate the clio pipeline with new settings
+        global clio_pipeline
+        
+        # Create new provider configuration
+        if provider == 'demo':
+            # No API key needed for demo
+            api_key = ''
+        
+        # Recreate clio pipeline with new settings
+        llm_provider = ProviderFactory.create_llm_provider(
+            provider=provider,
+            api_key=api_key,
+            model=model
+        )
+        
+        if llm_provider:
+            # For now, we'll use a simple embedding fallback
+            embedding_provider = None
+            try:
+                if provider == 'openai' and api_key:
+                    from briefx.providers.factory import EmbeddingProviderEnum
+                    embedding_provider = ProviderFactory.create_embedding_provider(
+                        provider=EmbeddingProviderEnum.OPENAI,
+                        api_key=api_key
+                    )
+            except:
+                pass
+                
+            # Update pipeline
+            clio_pipeline = ClioAnalysisPipeline(
+                llm_provider=llm_provider,
+                embedding_provider=embedding_provider,
+                session_manager=session_manager
+            )
+            
+            return jsonify({
+                'success': True,
+                'message': f'Updated to {provider} provider',
+                'data': {
+                    'provider': provider,
+                    'model': model,
+                    'has_embeddings': embedding_provider is not None
+                }
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': f'Failed to initialize {provider} provider. Check API key.'
+            }), 400
+            
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 

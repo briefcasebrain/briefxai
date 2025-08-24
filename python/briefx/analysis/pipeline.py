@@ -13,15 +13,25 @@ from .clustering import ConversationClusterer
 from .dimensionality import reduce_embeddings_for_clustering, reduce_embeddings_for_visualization
 from .session_manager import session_manager
 from ..prompts import AdvancedPromptManager
-from config import BriefXConfig, LlmProvider, EmbeddingProvider as EmbeddingProviderEnum
+# Configuration will be handled directly
 
 logger = logging.getLogger(__name__)
 
 class AnalysisPipeline:
     """Main analysis pipeline for processing conversations"""
     
-    def __init__(self, config: BriefXConfig):
-        self.config = config
+    def __init__(self, config=None):
+        # Use simple defaults for free demo
+        self.config = config or type('Config', (), {
+            'llm_provider': 'demo',
+            'llm_model': 'demo-analyzer',
+            'llm_api_key': '',
+            'llm_base_url': None,
+            'embedding_provider': 'openai',
+            'embedding_model': 'text-embedding-3-small',
+            'embedding_api_key': ''
+        })()
+        
         self.llm_provider: Optional[LLMProvider] = None
         self.embedding_provider: Optional[EmbeddingProvider] = None
         self.clusterer = ConversationClusterer(method="auto", max_clusters=10, llm_provider=None)  # Will be updated after initialization
@@ -40,12 +50,16 @@ class AnalysisPipeline:
             base_url=self.config.llm_base_url
         )
         
-        # Initialize embedding provider using factory
-        self.embedding_provider = ProviderFactory.create_embedding_provider(
-            provider=self.config.embedding_provider,
-            api_key=self.config.embedding_api_key,
-            model=self.config.embedding_model
-        )
+        # Initialize embedding provider using factory (allow failure for free demo)
+        try:
+            self.embedding_provider = ProviderFactory.create_embedding_provider(
+                provider=self.config.embedding_provider,
+                api_key=self.config.embedding_api_key,
+                model=self.config.embedding_model
+            )
+        except Exception as e:
+            logger.warning(f"Embedding provider failed to initialize: {e}. Using fallback.")
+            self.embedding_provider = None
         
         # Update clusterer with LLM provider for enhanced naming
         self.clusterer.llm_provider = self.llm_provider
@@ -364,7 +378,7 @@ class AnalysisPipeline:
 # Global pipeline instance (will be initialized with config)
 pipeline: Optional[AnalysisPipeline] = None
 
-def initialize_pipeline(config: BriefXConfig):
+def initialize_pipeline(config=None):
     """Initialize the global pipeline instance"""
     global pipeline
     pipeline = AnalysisPipeline(config)

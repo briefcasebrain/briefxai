@@ -1,0 +1,126 @@
+# Git
+.git
+.gitignore
+.github
+
+# Documentation
+*.md
+docs/
+LICENSE
+
+# Development files
+.env
+.env.local
+.env.development
+*.log
+*.pid
+*.seed
+*.pid.lock
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Build artifacts
+target/
+debug/
+dist/
+build/
+
+# Test files
+tests/
+benches/
+*.test
+*.spec
+
+# CI/CD
+.gitlab-ci.yml
+.travis.yml
+azure-pipelines.yml
+Jenkinsfile
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Dependencies (will be rebuilt)
+node_modules/
+vendor/
+
+# Cache
+.cache/
+*.cache
+
+# Coverage
+coverage/
+*.lcov
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+
+# Rust specific (keep Cargo.lock)
+**/*.rs.bk
+*.pdb
+
+# Demo and example files
+demo_narrative*.md
+realistic_conversations.json
+example_data/
+
+# Local configuration
+config.local.toml
+secrets.yaml
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Backups
+*.backup
+*.bak
+*.old
+
+# Archives
+*.zip
+*.tar.gz
+*.rar
+
+# Keys and certificates (NEVER include these)
+*.pem
+*.key
+*.crt
+*.cert
+*.pfx
+*.p12
+
+# Cloud provider files
+.gcloudignore
+.aws/
+.azure/
+
+# Docker files we don't want in the image
+docker-compose*.yml
+Dockerfile.*
+!Dockerfile
+
+# Keep only production UI data
+*_ui_data/node_modules/
+*_ui_data/src/
+*_ui_data/webpack.config.js
+*_ui_data/package*.json
+*_ui_data/tsconfig.json

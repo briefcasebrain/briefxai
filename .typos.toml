@@ -1,0 +1,114 @@
+# Typos configuration for BriefXAI
+# This file configures spell checking with typos
+
+[default]
+# Check all text files
+extend-glob = ["**/*.{rs,md,toml,yml,yaml,json,txt}"]
+
+# Ignore certain patterns
+extend-ignore-re = [
+    # Git hashes
+    "[0-9a-f]{7,40}",
+    # URLs
+    "https?://[\\w\\.-]+",
+    # Email addresses  
+    "[\\w\\.-]+@[\\w\\.-]+\\.[a-z]{2,}",
+    # File paths with extensions
+    "[\\w\\.-]+\\.[a-z0-9]{1,4}",
+    # Base64-like strings
+    "[A-Za-z0-9+/]{20,}={0,2}",
+    # API keys (placeholder patterns)
+    "sk-[A-Za-z0-9]{32,}",
+    "hf_[A-Za-z0-9]{32,}",
+]
+
+[default.extend-words]
+# Domain-specific terminology
+clio = "clio"
+facets = "facets"
+embeddings = "embeddings"
+umap = "umap"
+kmeans = "kmeans"
+ollama = "ollama"
+tiktoken = "tiktoken"
+openai = "openai"
+huggingface = "huggingface"
+
+# Technical terms
+async = "async"
+await = "await"
+tokio = "tokio"
+serde = "serde"
+clippy = "clippy"
+rustfmt = "rustfmt"
+tarpaulin = "tarpaulin"
+ndarray = "ndarray"
+linfa = "linfa"
+axum = "axum"
+reqwest = "reqwest"
+uuid = "uuid"
+sqlx = "sqlx"
+
+# Abbreviations and acronyms
+api = "api"
+cli = "cli"
+llm = "llm"
+uri = "uri"
+url = "url"
+json = "json"
+yaml = "yaml"
+toml = "toml"
+html = "html"
+css = "css"
+js = "js"
+ai = "ai"
+ml = "ml"
+gpu = "gpu"
+cpu = "cpu"
+ram = "ram"
+io = "io"
+os = "os"
+
+# Variable names (common patterns)
+idx = "idx"
+iter = "iter"
+len = "len"
+ptr = "ptr"
+vec = "vec"
+str = "str"
+num = "num"
+val = "val"
+ref = "ref"
+mut = "mut"
+cfg = "cfg"
+env = "env"
+tmp = "tmp"
+src = "src"
+dst = "dst"
+
+# Project-specific terms
+briefxai = "briefxai"
+clusterwise = "clusterwise"
+facetwise = "facetwise"
+batchwise = "batchwise"
+
+[files]
+# Ignore generated files and dependencies
+extend-exclude = [
+    "target/",
+    "Cargo.lock",
+    "*.log",
+    "node_modules/",
+    ".git/",
+    "coverage/",
+    "*.svg",
+    "*.png",
+    "*.jpg",
+    "*.jpeg",
+    "*.gif",
+    "*.ico",
+    "*.woff*",
+    "*.ttf",
+    "*.eot",
+    "*.map",
+]

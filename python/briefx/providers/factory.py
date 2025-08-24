@@ -7,12 +7,14 @@ from enum import Enum
 
 from ..data.models import ConversationData
 from .base import LLMProvider, EmbeddingProvider
-# Define provider enums
+
 class LlmProviderEnum(Enum):
+    DEMO = "demo"
     OPENAI = "openai"
     ANTHROPIC = "anthropic" 
     HUGGINGFACE = "huggingface"
     OLLAMA = "ollama"
+    GEMINI = "gemini"
 
 class EmbeddingProviderEnum(Enum):
     OPENAI = "openai"
@@ -25,7 +27,7 @@ class ProviderFactory:
     
     @staticmethod
     def create_llm_provider(
-        provider: LlmProviderEnum,
+        provider,  # Can be LlmProviderEnum or string
         api_key: Optional[str] = None,
         model: str = "default",
         base_url: Optional[str] = None,
@@ -34,7 +36,21 @@ class ProviderFactory:
         """Create an LLM provider instance"""
         
         try:
-            if provider == LlmProviderEnum.OPENAI:
+            # Convert string to enum if needed
+            if isinstance(provider, str):
+                try:
+                    provider = LlmProviderEnum(provider.lower())
+                except ValueError:
+                    logger.error(f"Unknown provider: {provider}")
+                    return None
+            
+            if provider == LlmProviderEnum.DEMO:
+                from .demo import DemoLLMProvider
+                return DemoLLMProvider(
+                    model=model if model != "default" else "demo-analyzer"
+                )
+            
+            elif provider == LlmProviderEnum.OPENAI:
                 from .openai import OpenAILLMProvider
                 if not api_key:
                     logger.error("OpenAI API key required")
@@ -125,6 +141,18 @@ class ProviderFactory:
     def get_available_llm_providers() -> Dict[str, Dict[str, Any]]:
         """Get information about available LLM providers"""
         providers = {}
+        
+        # Check Demo provider (always available)
+        providers["demo"] = {
+            "name": "Demo Provider",
+            "available": True,
+            "requires_api_key": False,
+            "models": ["demo-analyzer", "demo-basic"],
+            "capabilities": ["text_generation", "conversation_analysis", "facet_extraction"],
+            "local": True,
+            "cost": "free",
+            "memory_intensive": False
+        }
         
         # Check OpenAI
         try:

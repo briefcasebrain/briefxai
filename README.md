@@ -1,213 +1,140 @@
-# BriefX
+# BriefX - Intelligent Conversation Analysis Platform
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/briefcasebrain/briefxai)
+BriefX is a powerful conversation analysis platform that helps you understand patterns, extract insights, and visualize relationships in conversational data. Whether you're analyzing customer support tickets, research interviews, or team communications, BriefX provides the tools you need to make sense of your conversations.
 
-A high-performance conversation analysis platform for extracting insights from conversational data at scale.
+## 🚀 Try It Now
 
-> **Note**: This repository contains both Python and Rust implementations. **The Python implementation is the active, maintained version**. The Rust implementation is deprecated and no longer maintained.
+**[Launch BriefX](https://briefx-416764050725.us-central1.run.app)** - No installation required!
 
-## Overview
-
-BriefX provides enterprise-grade conversation analysis capabilities with advanced clustering algorithms and pattern discovery methodologies. Built for performance, privacy, and scalability.
-
-## Features
+## ✨ Features
 
 ### Core Capabilities
-- **Advanced Clustering** - Multi-level conversation grouping with hierarchical analysis
-- **Facet Extraction** - Automatic identification of topics, sentiments, intents, and entities  
-- **Privacy Protection** - PII detection and threshold-based anonymization
-- **Real-time Processing** - Stream processing with WebSocket support
-- **Multi-provider Support** - Compatible with various LLM providers (OpenAI, Anthropic, local models)
+- **Smart Clustering** - Automatically groups similar conversations to identify patterns and themes
+- **Facet Extraction** - Extracts key attributes like sentiment, intent, urgency, and complexity
+- **Interactive Visualizations** - Explore your data through dynamic charts and graphs
+- **Topic Analysis** - Identifies main topics and themes across conversations
+- **Privacy-First Design** - Your data stays secure with configurable privacy thresholds
 
-### Technical Features  
-- Concurrent processing for high throughput
-- Session persistence with pause/resume capability
-- Efficient caching and batch processing
-- REST and WebSocket APIs
-- UMAP dimensionality reduction for visualization
-- Smart preprocessing with language detection
+### Analysis Options
+- **Free Demo Mode** - Get started immediately with rule-based analysis, no API keys required
+- **Premium Providers** - Connect your own OpenAI, Anthropic, or Google Gemini API keys for advanced AI-powered analysis
+- **Flexible Processing** - Support for JSON, CSV, and plain text conversation formats
 
-## Quick Start
+## 🎯 Use Cases
 
-### Python Implementation (Active)
+- **Customer Support** - Analyze support tickets to identify common issues and improve response strategies
+- **User Research** - Extract insights from user interviews and feedback sessions
+- **Team Analytics** - Understand communication patterns within your organization
+- **Content Analysis** - Process and categorize large volumes of conversational content
+- **Market Research** - Analyze customer conversations to identify trends and opportunities
 
-1. **Navigate to Python Directory**
-   ```bash
-   cd python/
-   ```
+## 🛠️ Technology Stack
 
-2. **Install Dependencies**
-   ```bash
-   pip install -r requirements.txt
-   ```
+- **Backend**: Python with Flask framework
+- **Analysis Engine**: Scikit-learn for clustering, custom NLP pipelines
+- **Frontend**: Pure JavaScript with D3.js and Chart.js for visualizations
+- **Deployment**: Google Cloud Run for scalable, serverless hosting
+- **AI Providers**: Support for OpenAI, Anthropic, and Google Gemini APIs
 
-3. **Set Environment Variables**
-   ```bash
-   export OPENAI_API_KEY="your-api-key-here"
-   # or
-   export ANTHROPIC_API_KEY="your-api-key-here" 
-   ```
+## 📊 How It Works
 
-4. **Run Web Interface**
-   ```bash
-   python app.py
-   ```
+1. **Upload Your Data** - Import conversations in JSON, CSV, or text format
+2. **Configure Analysis** - Choose between free demo mode or connect your API keys
+3. **Process & Analyze** - The platform clusters conversations and extracts insights
+4. **Explore Results** - Interactive dashboards help you understand patterns and trends
+5. **Export Findings** - Download your analysis results for further use
 
-5. **Access Interface**
-   Open http://localhost:8080 in your browser
+## 🔧 Local Development
 
-### Rust Implementation (Deprecated)
+### Prerequisites
+- Python 3.11+
+- Docker (optional, for containerized deployment)
 
-> ⚠️ **Deprecated**: The Rust implementation is no longer maintained. Use the Python implementation above.
+### Quick Start
 
-## Usage Examples
-
-### Python API
-
-```python
-from briefx.data.models import ConversationData, Message
-from briefx.examples import generate_example_conversations
-
-# Create conversation data
-conversations = [
-    ConversationData(messages=[
-        Message(role="user", content="I need help with my order"),
-        Message(role="assistant", content="I'd be happy to help with your order")
-    ])
-]
-
-# Or generate examples for testing
-test_conversations = generate_example_conversations(count=5, seed=42)
-```
-
-### REST API
-
+1. Clone the repository:
 ```bash
-# Upload conversations
-curl -X POST http://localhost:8080/api/conversations \
-  -H "Content-Type: application/json" \
-  -d '{"conversations": [{"messages": [{"role": "user", "content": "Hello"}]}]}'
-
-# Get analysis results
-curl http://localhost:8080/api/analysis/results
+git clone https://github.com/yourusername/briefx.git
+cd briefx
 ```
 
-## Configuration
-
-### Environment Variables
-- `OPENAI_API_KEY` - OpenAI API key
-- `ANTHROPIC_API_KEY` - Anthropic API key
-- `BRIEFX_PORT` - Server port (default: 8080)
-- `BRIEFX_HOST` - Server host (default: 127.0.0.1)
-- `BRIEFX_LOG_LEVEL` - Log level (default: INFO)
-
-### Configuration File
-Create `config.toml`:
-
-```toml
-[server]
-host = "127.0.0.1"
-port = 8080
-
-[analysis]
-batch_size = 100
-max_concurrent_requests = 10
-
-[providers.openai]
-enabled = true
-model = "gpt-4"
-api_key = "${OPENAI_API_KEY}"
-```
-
-See `docs/configuration.md` for complete configuration options.
-
-## Architecture
-
-- **Data Models** - Structured conversation and analysis data types
-- **Preprocessing** - Text normalization, validation, and language detection
-- **Analysis Pipeline** - Clustering, facet extraction, and pattern discovery
-- **Provider System** - Pluggable LLM and embedding provider architecture
-- **Web Interface** - Interactive visualization and analysis tools
-- **Persistence** - Session management and result caching
-
-## Development
-
-### Python Development (Active)
-
+2. Install dependencies:
 ```bash
-# Navigate to Python directory
-cd python/
-
-# Install development dependencies
+cd python
 pip install -r requirements.txt
+```
 
-# Run tests
-python tests/test_updated.py
+3. Set up environment variables (optional):
+```bash
+cp .env.example .env
+# Add your API keys if you want to use premium providers
+```
 
-# Use CLI tools
-python cli_simple.py --help
-python cli_simple.py generate --count 5
-python cli_simple.py test
-
-# Start development server
+4. Run the application:
+```bash
 python app.py
 ```
 
-### Rust Development (Deprecated)
+5. Open your browser to `http://localhost:8080`
 
-> ⚠️ **Deprecated**: The Rust implementation is no longer maintained.
+### Docker Deployment
 
-## API Documentation
+Build and run with Docker:
+```bash
+docker build -t briefx .
+docker run -p 8080:8080 briefx
+```
 
-### Core Endpoints
+## 🔑 API Configuration
 
-- `GET /` - Web interface
-- `POST /api/conversations` - Upload conversation data
-- `GET /api/analysis/results` - Get analysis results
-- `POST /api/analysis/start` - Start analysis session
-- `GET /api/monitoring/health` - Health check
+BriefX works out of the box with the free demo mode. To unlock advanced features, you can configure API keys for:
 
-### WebSocket Endpoints
+- **OpenAI** - For GPT-based analysis
+- **Anthropic** - For Claude-based analysis
+- **Google Gemini** - For Gemini-based analysis
 
-- `/ws/analysis` - Real-time analysis updates
-- `/ws/progress` - Analysis progress updates
+API keys can be configured through the web interface or environment variables.
 
-See `docs/api.md` for complete API documentation.
+## 📝 Data Formats
 
-## Performance
+### JSON Format
+```json
+{
+  "conversations": [
+    {
+      "id": "conv1",
+      "messages": [
+        {"role": "user", "content": "Hello, I need help"},
+        {"role": "assistant", "content": "How can I assist you?"}
+      ]
+    }
+  ]
+}
+```
 
-### Benchmarks (Python Implementation)
-- **Throughput**: 1000+ conversations/minute
-- **Memory Usage**: ~512MB for 10k conversations  
-- **Clustering**: 100 conversations clustered in <5 seconds
-- **Facet Extraction**: 50ms average per conversation
-- **API Response Time**: <100ms for most endpoints
+### CSV Format
+```csv
+conversation_id,timestamp,speaker,message
+conv1,2024-01-01 10:00,user,"Hello, I need help"
+conv1,2024-01-01 10:01,assistant,"How can I assist you?"
+```
 
-## Privacy & Security
+## 🤝 Contributing
 
-- **PII Detection** - Automatic detection of emails, phone numbers, addresses
-- **Data Anonymization** - Configurable masking and removal policies
-- **Local Processing** - Option to run entirely offline with local models
-- **Secure Storage** - Encrypted data persistence options
-- **Access Control** - API key authentication and rate limiting
+We welcome contributions! Please see our [Contributing Guide](CONTRIBUTING.md) for details.
 
-## License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## Contributing
+## 🙏 Acknowledgments
 
-Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct and the process for submitting pull requests.
+Built with modern web technologies and designed for scalability and ease of use. Special thanks to the open-source community for the amazing tools that make this project possible.
 
-## Support
+## 📧 Contact
 
-For questions and support:
-- Check the [documentation](docs/)
-- Review [examples](python/briefx/examples.py)
-- Use the CLI: `python python/cli_simple.py --help`
-- Open an issue on GitHub
+For questions, suggestions, or support, please open an issue on GitHub or contact the maintainers.
 
-## Changelog
+---
 
-See [CHANGELOG.md](CHANGELOG.md) for version history and updates.
+**[Try BriefX Now →](https://briefx-416764050725.us-central1.run.app)**

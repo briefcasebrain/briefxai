@@ -2,17 +2,18 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Copy requirements and install dependencies
-COPY requirements.txt .
+# Copy Python implementation
+COPY python/ ./
+
+# Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy application code
-COPY app.py .
-COPY config.py .
-COPY src/ ./src/
-
 # Copy UI files
-COPY briefxai_ui_data ./briefxai_ui_data
+COPY ui ./ui
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV PORT=8080
 
 # Expose port
 EXPOSE 8080
