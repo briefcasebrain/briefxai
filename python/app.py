@@ -1580,6 +1580,103 @@ def update_settings():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/update_provider', methods=['POST'])
+def update_provider_settings():
+    """Update provider settings from the UI"""
+    try:
+        data = request.get_json()
+        
+        # Update global configuration
+        config.llm_provider = data.get('llm_provider', 'demo')
+        config.llm_model = data.get('llm_model', 'demo-analyzer')
+        config.embedding_provider = data.get('embedding_provider', 'demo')
+        config.embedding_model = data.get('embedding_model', 'demo-embeddings')
+        
+        # Set API keys if provided
+        if config.llm_provider != 'demo':
+            api_key = data.get('llm_api_key', '')
+            if config.llm_provider == 'openai':
+                config.openai_api_key = api_key
+            elif config.llm_provider == 'anthropic':
+                config.anthropic_api_key = api_key
+            elif config.llm_provider == 'gemini':
+                config.google_api_key = api_key
+        
+        if config.embedding_provider == 'openai':
+            config.openai_api_key = data.get('embedding_api_key', config.openai_api_key)
+        
+        # Recreate the pipeline with new settings
+        global clio_pipeline
+        clio_pipeline = None  # Reset pipeline to force recreation
+        
+        # Test that the pipeline can be created
+        pipeline = get_clio_pipeline()
+        if pipeline:
+            return jsonify({
+                'status': 'success',
+                'message': f'Successfully configured {config.llm_provider} provider with {config.embedding_provider} embeddings'
+            })
+        else:
+            return jsonify({
+                'status': 'error', 
+                'message': 'Failed to create analysis pipeline. Please check your configuration.'
+            }), 400
+            
+    except Exception as e:
+        logger.error(f"Failed to update provider settings: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': f'Configuration error: {str(e)}'
+        }), 500
+
+@app.route('/api/test_provider', methods=['POST'])
+def test_provider_connection():
+    """Test connection to the configured provider"""
+    try:
+        data = request.get_json()
+        provider = data.get('llm_provider', 'demo')
+        api_key = data.get('llm_api_key', '')
+        model = data.get('llm_model', 'demo-analyzer')
+        
+        if provider == 'demo':
+            return jsonify({
+                'status': 'success',
+                'message': 'Demo provider is ready! No API key required.'
+            })
+        
+        # Try to create and test the provider
+        llm_provider = ProviderFactory.create_llm_provider(
+            provider=provider,
+            api_key=api_key,
+            model=model
+        )
+        
+        if llm_provider:
+            # Try a simple test completion
+            try:
+                test_response = llm_provider.complete("Test connection - respond with 'OK'")
+                return jsonify({
+                    'status': 'success',
+                    'message': f'Successfully connected to {provider}! Test response: {test_response[:50]}...'
+                })
+            except Exception as e:
+                return jsonify({
+                    'status': 'error',
+                    'message': f'Provider created but test failed: {str(e)}'
+                }), 400
+        else:
+            return jsonify({
+                'status': 'error',
+                'message': f'Failed to create {provider} provider. Check your API key.'
+            }), 400
+            
+    except Exception as e:
+        logger.error(f"Provider test failed: {e}")
+        return jsonify({
+            'status': 'error',
+            'message': f'Connection test error: {str(e)}'
+        }), 500
+
 @app.route('/api/example')
 def get_example_data():
     """Return example data for demo purposes"""

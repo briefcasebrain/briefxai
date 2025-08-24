@@ -1,21 +1,142 @@
 # Configuration Guide
 
-BriefXAI offers extensive configuration options through TOML files, environment variables, and command-line arguments.
+BriefXAI offers extensive configuration options with smart defaults and automatic model detection. Configure via `.env` files, TOML files, environment variables, and command-line arguments.
+
+## ✨ New Features
+
+- **Smart Model Auto-Detection**: Automatically selects optimal models based on content
+- **Cost Optimization**: Built-in features to minimize cloud API costs
+- **Google Gemini Support**: Full integration with Google's embedding and LLM models
+- **Unified Environment**: Simple `.env` file configuration
 
 ## Configuration Priority
 
 Configuration sources are applied in this order (highest to lowest priority):
 
 1. Command-line arguments
-2. Environment variables
+2. Environment variables (including `.env` file)
 3. User configuration file (`~/.config/briefxai/config.toml`)
-4. Project configuration file (`./config.toml`)
+4. Project configuration file (`./config.toml`)  
 5. System configuration file (`/etc/briefxai/config.toml`)
-6. Default values
+6. Auto-detected values (models, providers)
+7. Default values
+
+## Quick Setup: .env File (Recommended)
+
+The easiest way to configure BriefXAI is with a `.env` file:
+
+```bash
+# Copy the example file
+cp .env.example .env
+
+# Edit with your preferences
+nano .env
+```
+
+### Complete .env Example
+
+```bash
+# =============================================================================
+# BriefXAI Configuration
+# =============================================================================
+
+# API Keys (Optional - leave blank for demo mode)
+OPENAI_API_KEY=sk-your-openai-key-here
+GOOGLE_API_KEY=your-gemini-key-here
+ANTHROPIC_API_KEY=sk-ant-your-anthropic-key-here
+HUGGINGFACE_API_KEY=hf_your-huggingface-key-here
+COHERE_API_KEY=your-cohere-key-here
+
+# Server Configuration
+PORT=8080
+HOST=0.0.0.0
+FLASK_ENV=production
+
+# Model Defaults (Auto-detection will override based on content)
+DEFAULT_LLM_MODEL=gemini-1.5-flash
+DEFAULT_EMBEDDING_MODEL=text-embedding-004
+DEFAULT_LLM_PROVIDER=gemini
+DEFAULT_EMBEDDING_PROVIDER=google
+
+# Cost Control Settings
+MAX_CONVERSATIONS=1000
+MAX_MESSAGES_PER_CONVERSATION=100
+BATCH_SIZE=3
+MAX_CONCURRENT_REQUESTS=5
+REQUEST_TIMEOUT=30
+
+# Feature Flags
+ENABLE_DEMO_MODE=true
+ENABLE_AUTO_DETECTION=true
+ENABLE_COST_ESTIMATION=true
+ENABLE_OCR=true
+
+# Privacy Settings
+MIN_PRIVACY_THRESHOLD=3
+ENABLE_PII_DETECTION=false
+PII_ACTION=mask
+
+# Performance Settings
+CACHE_ENABLED=true
+CACHE_TTL_SECONDS=3600
+DEDUP_DATA=true
+
+# Optional: Custom API Base URLs
+OPENAI_BASE_URL=https://api.openai.com/v1
+OLLAMA_BASE_URL=http://localhost:11434
+VLLM_BASE_URL=http://localhost:8000
+
+# Logging
+LOG_LEVEL=info
+VERBOSE=false
+```
+
+## Auto-Detection Features 🎯
+
+BriefXAI includes intelligent auto-detection to optimize performance and cost:
+
+### Model Auto-Detection
+
+The system analyzes your conversation content and automatically selects the best models:
+
+```javascript
+// Content Analysis Triggers:
+- Multilingual content → Multilingual embedding models
+- Technical/code content → High-quality models (GPT-4, Gemini Pro)  
+- Large datasets (500+ conversations) → Efficient models (Flash, GPT-4o-mini)
+- Simple content → Cost-effective models (Flash-8B, GPT-3.5)
+- General content → Balanced models (Flash, GPT-4o-mini)
+```
+
+### Cost Optimization
+
+Built-in features to minimize cloud costs:
+
+```bash
+# Automatic cost controls:
+✅ Smart model selection based on complexity
+✅ Batch size optimization (reduces failed requests)  
+✅ Rate limiting to avoid hitting API limits
+✅ Deduplication to reduce processing
+✅ Cost estimation before analysis
+```
+
+### Provider Auto-Detection
+
+The system automatically detects available providers:
+
+```bash
+# Detection order:
+1. Ollama (if running locally) → Free
+2. Google Gemini (if API key provided) → Most cost-effective  
+3. OpenAI (if API key provided) → High quality
+4. Other providers (HuggingFace, Anthropic, etc.)
+5. Demo mode (if no providers available) → No cost
+```
 
 ## Configuration File Format
 
-BriefXAI uses TOML format for configuration files. Here's a complete example:
+BriefXAI uses TOML format for advanced configuration. Here's a complete example:
 
 ```toml
 # config.toml - Complete configuration example

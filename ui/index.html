@@ -924,28 +924,113 @@
         <!-- Settings View -->
         <div class="view-section" id="settingsView">
             <div class="upload-container">
-                <h2>Settings</h2>
-                <div style="margin-top: 2rem;">
-                    <h3 style="margin-bottom: 1rem;">Analysis Configuration</h3>
-                    <div style="display: grid; gap: 1rem;">
-                        <label>
-                            <span style="display: block; margin-bottom: 0.5rem;">Provider</span>
-                            <select id="providerSelect" style="width: 100%; padding: 0.5rem; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
-                                <option value="openai">OpenAI</option>
-                                <option value="ollama">Ollama (Local)</option>
-                                <option value="vllm">vLLM</option>
-                            </select>
-                        </label>
-                        <label>
-                            <span style="display: block; margin-bottom: 0.5rem;">Model</span>
-                            <input type="text" id="modelInput" value="gpt-4o-mini" style="width: 100%; padding: 0.5rem; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
-                        </label>
-                        <label>
-                            <span style="display: block; margin-bottom: 0.5rem;">Batch Size</span>
-                            <input type="number" id="batchSizeInput" value="100" min="1" max="1000" style="width: 100%; padding: 0.5rem; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
-                        </label>
+                <h2>Provider Settings</h2>
+                <p style="color: var(--gray); margin-bottom: 2rem;">Configure your AI providers for advanced analysis. Demo mode works without API keys.</p>
+                
+                <div style="display: grid; gap: 2rem;">
+                    <!-- LLM Provider Configuration -->
+                    <div style="background: var(--white); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid #e5e7eb;">
+                        <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            🤖 Language Model Provider
+                        </h3>
+                        
+                        <div style="display: grid; gap: 1rem;">
+                            <label>
+                                <span style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Provider</span>
+                                <select id="llm-provider" onchange="updateProviderUI()" style="width: 100%; padding: 0.75rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; background: white;">
+                                    <option value="demo" selected>Demo (Free - No API Key)</option>
+                                    <option value="openai">OpenAI (GPT-4, GPT-3.5)</option>
+                                    <option value="anthropic">Anthropic (Claude)</option>
+                                    <option value="gemini">Google Gemini</option>
+                                    <option value="ollama">Ollama (Local)</option>
+                                </select>
+                            </label>
+                            
+                            <div id="api-key-section" style="display: none;">
+                                <label>
+                                    <span style="display: block; margin-bottom: 0.5rem; font-weight: 500;">API Key</span>
+                                    <input type="password" id="api-key" placeholder="Enter your API key" style="width: 100%; padding: 0.75rem; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
+                                    <div style="font-size: 0.875rem; color: var(--gray); margin-top: 0.25rem;">
+                                        Your API key is stored locally and never sent to our servers
+                                    </div>
+                                </label>
+                            </div>
+                            
+                            <label>
+                                <span style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Model</span>
+                                <input type="text" id="llm-model" value="demo-analyzer" style="width: 100%; padding: 0.75rem; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
+                            </label>
+                        </div>
                     </div>
-                    <button class="btn btn-primary" style="margin-top: 1.5rem;" onclick="saveSettings()">Save Settings</button>
+                    
+                    <!-- Embedding Provider Configuration -->
+                    <div style="background: var(--white); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid #e5e7eb;">
+                        <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            🔗 Embedding Provider
+                        </h3>
+                        
+                        <div style="display: grid; gap: 1rem;">
+                            <label>
+                                <span style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Provider</span>
+                                <select id="embedding-provider" onchange="updateEmbeddingProviderUI()" style="width: 100%; padding: 0.75rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; background: white;">
+                                    <option value="demo" selected>Demo (Free - No API Key)</option>
+                                    <option value="openai">OpenAI Embeddings</option>
+                                </select>
+                            </label>
+                            
+                            <div id="embedding-api-key-section" style="display: none;">
+                                <label>
+                                    <span style="display: block; margin-bottom: 0.5rem; font-weight: 500;">API Key</span>
+                                    <input type="password" id="embedding-api-key" placeholder="Enter your API key" style="width: 100%; padding: 0.75rem; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
+                                </label>
+                            </div>
+                            
+                            <label>
+                                <span style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Model</span>
+                                <input type="text" id="embedding-model" value="demo-embeddings" style="width: 100%; padding: 0.75rem; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Privacy & Performance Settings -->
+                    <div style="background: var(--white); padding: 1.5rem; border-radius: 0.75rem; border: 1px solid #e5e7eb;">
+                        <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                            ⚙️ Analysis Configuration
+                        </h3>
+                        
+                        <div style="display: grid; gap: 1rem;">
+                            <label>
+                                <span style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Max Conversations</span>
+                                <input type="number" id="max-conversations" value="1000" min="10" max="10000" style="width: 100%; padding: 0.75rem; border: 1px solid #e5e7eb; border-radius: 0.5rem;">
+                                <div style="font-size: 0.875rem; color: var(--gray); margin-top: 0.25rem;">
+                                    Limit the number of conversations to process
+                                </div>
+                            </label>
+                            
+                            <label>
+                                <span style="display: block; margin-bottom: 0.5rem; font-weight: 500;">Privacy Threshold</span>
+                                <select id="privacy-threshold" style="width: 100%; padding: 0.75rem; border: 1px solid #e5e7eb; border-radius: 0.5rem; background: white;">
+                                    <option value="1">Low (k=1) - Show all data</option>
+                                    <option value="3" selected>Medium (k=3) - Moderate privacy</option>
+                                    <option value="5">High (k=5) - Strong privacy</option>
+                                    <option value="10">Maximum (k=10) - Maximum privacy</option>
+                                </select>
+                                <div style="font-size: 0.875rem; color: var(--gray); margin-top: 0.25rem;">
+                                    Higher values provide more privacy but may hide small groups
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div style="display: flex; gap: 1rem;">
+                        <button class="btn btn-primary" onclick="saveProviderSettings()">Save Configuration</button>
+                        <button class="btn btn-secondary" onclick="testConnection()">Test Connection</button>
+                        <button class="btn btn-secondary" onclick="resetToDefaults()">Reset to Defaults</button>
+                    </div>
+                    
+                    <div id="settings-status" style="margin-top: 1rem; padding: 1rem; border-radius: 0.5rem; display: none;">
+                        <!-- Status messages will appear here -->
+                    </div>
                 </div>
             </div>
         </div>
@@ -993,6 +1078,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             setupEventListeners();
             loadRecentProjects();
+            loadProviderSettings();
             // Initialize with example data for immediate visualization
             initializeWithExampleData();
         });
@@ -2014,6 +2100,180 @@
             
             localStorage.setItem('briefx-settings', JSON.stringify(settings));
             alert('Settings saved successfully!');
+        }
+
+        // New provider settings functions
+        function saveProviderSettings() {
+            const settings = {
+                llm_provider: document.getElementById('llm-provider').value,
+                llm_model: document.getElementById('llm-model').value,
+                llm_api_key: document.getElementById('api-key').value,
+                embedding_provider: document.getElementById('embedding-provider').value,
+                embedding_model: document.getElementById('embedding-model').value,
+                embedding_api_key: document.getElementById('embedding-api-key').value,
+                max_conversations: document.getElementById('max-conversations').value,
+                privacy_threshold: document.getElementById('privacy-threshold').value
+            };
+            
+            // Store settings locally
+            localStorage.setItem('briefx-provider-settings', JSON.stringify(settings));
+            
+            // Send to backend
+            fetch('/api/update_provider', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(settings)
+            })
+            .then(response => response.json())
+            .then(data => {
+                showSettingsStatus(data.status === 'success' ? 'success' : 'error', data.message);
+            })
+            .catch(error => {
+                showSettingsStatus('error', 'Failed to save settings: ' + error.message);
+            });
+        }
+
+        function testConnection() {
+            const settings = {
+                llm_provider: document.getElementById('llm-provider').value,
+                llm_api_key: document.getElementById('api-key').value,
+                llm_model: document.getElementById('llm-model').value
+            };
+
+            showSettingsStatus('info', 'Testing connection...');
+            
+            fetch('/api/test_provider', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(settings)
+            })
+            .then(response => response.json())
+            .then(data => {
+                showSettingsStatus(data.status === 'success' ? 'success' : 'error', data.message);
+            })
+            .catch(error => {
+                showSettingsStatus('error', 'Connection test failed: ' + error.message);
+            });
+        }
+
+        function resetToDefaults() {
+            document.getElementById('llm-provider').value = 'demo';
+            document.getElementById('llm-model').value = 'demo-analyzer';
+            document.getElementById('api-key').value = '';
+            document.getElementById('embedding-provider').value = 'demo';
+            document.getElementById('embedding-model').value = 'demo-embeddings';
+            document.getElementById('embedding-api-key').value = '';
+            document.getElementById('max-conversations').value = '1000';
+            document.getElementById('privacy-threshold').value = '3';
+            
+            updateProviderUI();
+            updateEmbeddingProviderUI();
+            showSettingsStatus('info', 'Settings reset to defaults');
+        }
+
+        function updateProviderUI() {
+            const provider = document.getElementById('llm-provider').value;
+            const apiKeySection = document.getElementById('api-key-section');
+            const modelInput = document.getElementById('llm-model');
+            
+            if (provider === 'demo') {
+                apiKeySection.style.display = 'none';
+                modelInput.value = 'demo-analyzer';
+            } else {
+                apiKeySection.style.display = 'block';
+                
+                // Update placeholder and default model based on provider
+                const apiKeyInput = document.getElementById('api-key');
+                switch(provider) {
+                    case 'openai':
+                        apiKeyInput.placeholder = 'sk-...';
+                        modelInput.value = 'gpt-4o-mini';
+                        break;
+                    case 'anthropic':
+                        apiKeyInput.placeholder = 'sk-ant-...';
+                        modelInput.value = 'claude-3-haiku';
+                        break;
+                    case 'gemini':
+                        apiKeyInput.placeholder = 'AIza...';
+                        modelInput.value = 'gemini-1.5-flash';
+                        break;
+                    case 'ollama':
+                        apiKeySection.style.display = 'none';
+                        modelInput.value = 'llama3.2';
+                        break;
+                }
+            }
+        }
+
+        function updateEmbeddingProviderUI() {
+            const provider = document.getElementById('embedding-provider').value;
+            const apiKeySection = document.getElementById('embedding-api-key-section');
+            const modelInput = document.getElementById('embedding-model');
+            
+            if (provider === 'demo') {
+                apiKeySection.style.display = 'none';
+                modelInput.value = 'demo-embeddings';
+            } else if (provider === 'openai') {
+                apiKeySection.style.display = 'block';
+                modelInput.value = 'text-embedding-3-small';
+                document.getElementById('embedding-api-key').placeholder = 'sk-...';
+            }
+        }
+
+        function showSettingsStatus(type, message) {
+            const statusDiv = document.getElementById('settings-status');
+            statusDiv.style.display = 'block';
+            statusDiv.className = '';
+            
+            switch(type) {
+                case 'success':
+                    statusDiv.style.background = '#ecfdf5';
+                    statusDiv.style.color = '#047857';
+                    statusDiv.style.border = '1px solid #10b981';
+                    break;
+                case 'error':
+                    statusDiv.style.background = '#fee2e2';
+                    statusDiv.style.color = '#dc2626';
+                    statusDiv.style.border = '1px solid #ef4444';
+                    break;
+                case 'info':
+                    statusDiv.style.background = '#eff6ff';
+                    statusDiv.style.color = '#1d4ed8';
+                    statusDiv.style.border = '1px solid #3b82f6';
+                    break;
+            }
+            
+            statusDiv.textContent = message;
+            
+            // Auto-hide after 5 seconds for success/info messages
+            if (type !== 'error') {
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
+
+        // Load saved settings on page load
+        function loadProviderSettings() {
+            const saved = localStorage.getItem('briefx-provider-settings');
+            if (saved) {
+                try {
+                    const settings = JSON.parse(saved);
+                    document.getElementById('llm-provider').value = settings.llm_provider || 'demo';
+                    document.getElementById('llm-model').value = settings.llm_model || 'demo-analyzer';
+                    document.getElementById('api-key').value = settings.llm_api_key || '';
+                    document.getElementById('embedding-provider').value = settings.embedding_provider || 'demo';
+                    document.getElementById('embedding-model').value = settings.embedding_model || 'demo-embeddings';
+                    document.getElementById('embedding-api-key').value = settings.embedding_api_key || '';
+                    document.getElementById('max-conversations').value = settings.max_conversations || '1000';
+                    document.getElementById('privacy-threshold').value = settings.privacy_threshold || '3';
+                    
+                    updateProviderUI();
+                    updateEmbeddingProviderUI();
+                } catch (e) {
+                    console.error('Failed to load provider settings:', e);
+                }
+            }
         }
 
         // Progress Management

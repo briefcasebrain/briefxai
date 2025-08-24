@@ -1,14 +1,21 @@
-# Quick Start Guide
+# BriefXAI Quick Start Guide
 
-Get BriefXAI running in 5 minutes!
+Get BriefXAI running in under 5 minutes with smart auto-detection and cost optimization! ⚡
+
+## What You'll Get
+
+✨ **Smart Model Selection** - Automatically picks the best model for your content  
+💰 **Cost Optimization** - Built-in features to minimize cloud API costs  
+🎯 **Unified Dashboard** - Single interface with Overview, Clusters, and Visualization  
+📄 **OCR Support** - Upload PDFs, DOCX, TXT files with automatic text extraction  
 
 ## Prerequisites
 
 Before starting, ensure you have:
 - Rust 1.70+ installed ([Install Rust](https://rustup.rs/))
-- An API key from OpenAI or Google Gemini
-- 4GB of available RAM
-- 1GB of free disk space
+- **Optional**: API key from OpenAI, Google Gemini, or Anthropic
+- 2GB of available RAM (reduced requirement)
+- 500MB of free disk space
 
 ## Step 1: Clone and Build
 
@@ -21,57 +28,98 @@ cd briefxai
 cargo build --release
 ```
 
-## Step 2: Configure API Keys
+## Step 2: Setup Environment (Optional)
 
-Choose your preferred AI provider:
+Create a `.env` file for easy configuration:
 
-### Option A: OpenAI (Recommended)
 ```bash
-export OPENAI_API_KEY="sk-..."
+# Copy the example file
+cp .env.example .env
+
+# Edit with your preferred editor
+nano .env
 ```
 
-### Option B: Google Gemini
-```bash
-export GEMINI_API_KEY="AIza..."
-```
+**Choose your AI provider** (all are optional):
 
-### Option C: Local Ollama (No API key needed)
+### Option A: Google Gemini (Most Cost-Effective) 🏆
 ```bash
-# Install Ollama first
+# Get free API key: https://makersuite.google.com/app/apikey
+GOOGLE_API_KEY=your-gemini-key-here
+```
+**Cost**: ~$0.10 per 1000 conversations
+
+### Option B: OpenAI (Premium Quality)
+```bash
+# Get API key: https://platform.openai.com/api-keys
+OPENAI_API_KEY=sk-your-key-here
+```
+**Cost**: ~$0.50-2.00 per 1000 conversations
+
+### Option C: Local Ollama (Completely Free) 🆓
+```bash
+# Install Ollama
 curl -fsSL https://ollama.com/install.sh | sh
 
-# Pull a model
-ollama pull llama2
+# Pull a model (3GB download)
+ollama pull llama3.2:3b
 
-# Set the host
-export OLLAMA_HOST="http://localhost:11434"
+# That's it! BriefXAI will auto-detect Ollama
+```
+
+### Option D: No Setup (Demo Mode)
+```bash
+# Just leave .env empty - use built-in example data!
 ```
 
 ## Step 3: Start the Server
 
 ```bash
-./target/release/briefxai serve
+./target/release/briefxai ui --port 8080
 ```
 
 You should see:
 ```
-Starting BriefXAI Web Interface
-BriefXAI is ready!
-Open your browser to: http://localhost:8080
+🚀 BriefXAI Web Interface Starting...
+📊 Loading conversation analysis models...
+✅ Server ready at: http://localhost:8080
+🎯 Auto-detection enabled for cost optimization
 ```
+
+**Pro Tip**: The server will automatically open your browser! 🌐
 
 ## Step 4: Analyze Your First Conversation
 
-### Using the Web UI
+### Using the Web UI (Recommended)
 
-1. Open your browser to <http://localhost:8080>
-2. Click "Upload Conversations" or "Use Sample Data"
-3. Configure analysis settings:
-   - Select facets to extract (sentiment, topics, etc.)
-   - Choose clustering parameters
-   - Set privacy thresholds
-4. Click "Start Analysis"
-5. Watch real-time results appear!
+1. **Open your browser** to <http://localhost:8080>
+
+2. **Choose your data source:**
+   - 📁 **Upload Files**: JSON, CSV, PDF, TXT, DOCX (with OCR)
+   - ⭐ **Use Example Data**: Try with 100 sample conversations
+   - 📋 **Paste Data**: Copy/paste conversation text directly
+
+3. **Smart Configuration:**
+   - Click **"🎯 Auto-Detect"** buttons for automatic model selection
+   - Or manually choose LLM and embedding models
+   - **Cost estimate** appears automatically!
+
+4. **Start Analysis** and watch real-time progress:
+   ```
+   ✅ Data validation complete
+   🧠 Extracting conversation facets...
+   🔄 Generating embeddings (batch 1/3)...
+   🎯 Clustering conversations...
+   📊 Creating visualizations...
+   🎉 Analysis complete!
+   ```
+
+5. **Explore Results** in the unified dashboard:
+   - **Overview**: Key metrics and insights
+   - **Clusters**: Hierarchical conversation groups  
+   - **Visualization**: Interactive UMAP plots
+   - **Browse**: Search and filter conversations
+   - **Export**: Download CSV, JSON, or HTML reports
 
 ### Using the API
 
@@ -82,16 +130,26 @@ cat > conversations.json << 'EOF'
   {
     "messages": [
       {"role": "user", "content": "I can't log into my account"},
-      {"role": "assistant", "content": "I'll help you reset your password"}
-    ]
+      {"role": "assistant", "content": "I'll help you reset your password"},
+      {"role": "user", "content": "Thanks! That worked perfectly."}
+    ],
+    "metadata": {
+      "timestamp": "2024-01-15T10:30:00Z",
+      "category": "support"
+    }
   }
 ]
 EOF
 
-# Analyze via CLI
+# Analyze via CLI with smart defaults
 ./target/release/briefxai analyze \
-  --input conversations.json \
+  conversations.json \
   --output results/
+
+# Or analyze via API
+curl -X POST http://localhost:8080/api/analyze \
+  -H "Content-Type: application/json" \
+  -d '{"data": [...], "config": {"llm_provider": "gemini"}}'
 ```
 
 ## Step 5: View Results
@@ -105,20 +163,38 @@ Results include:
 ## Common Commands
 
 ```bash
-# Generate sample data for testing
-./target/release/briefxai example --count 100
+# Start web interface (recommended)
+./target/release/briefxai ui --port 8080
 
-# Analyze with custom config
-./target/release/briefxai analyze \
-  --input data.json \
-  --config config.toml \
-  --output results/
+# Generate sample data for testing  
+./target/release/briefxai example --output sample.json --count 100
+
+# CLI analysis with auto-detection
+./target/release/briefxai analyze sample.json --output results/
 
 # Start server on custom port
-./target/release/briefxai serve --port 3000
+./target/release/briefxai ui --port 3000
 
 # Enable debug logging
-RUST_LOG=debug ./target/release/briefxai serve
+RUST_LOG=debug ./target/release/briefxai ui
+
+# Check what models are available
+curl http://localhost:8080/api/status
+```
+
+## Pro Tips for Cost Optimization 💰
+
+```bash
+# Set cost-effective defaults in .env
+echo "DEFAULT_LLM_MODEL=gemini-1.5-flash-8b" >> .env
+echo "DEFAULT_EMBEDDING_MODEL=text-embedding-004" >> .env
+echo "BATCH_SIZE=3" >> .env
+
+# Monitor costs in real-time
+tail -f briefxai.log | grep "Cost estimate"
+
+# Use demo mode for testing (no API calls)
+echo "ENABLE_DEMO_MODE=true" >> .env
 ```
 
 ## Next Steps

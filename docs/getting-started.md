@@ -1,15 +1,23 @@
 # Getting Started with BriefXAI
 
-This guide will help you get BriefXAI up and running on your system.
+BriefXAI is an advanced conversation analysis platform that automatically extracts insights from your conversation data. This guide will help you get up and running quickly.
+
+## What's New ✨
+
+- **Smart Model Auto-Detection**: Automatically selects the most cost-effective model based on your content
+- **Google Gemini Support**: Full integration with Google's Gemini models
+- **Unified Dashboard**: Single-page interface with Overview, Clusters, Visualization, and Export tabs
+- **OCR Support**: Upload PDFs, DOCX, and TXT files for automatic text extraction
+- **Cost Optimization**: Built-in features to minimize cloud API costs
 
 ## Prerequisites
 
 Before you begin, ensure you have the following installed:
 
 - **Rust** 1.70 or higher ([Install Rust](https://rustup.rs/))
-- **SQLite** 3.35 or higher
 - **Git** for cloning the repository
 - **A text editor** for editing configuration files
+- **API Keys** (optional - for cloud models)
 
 ## Installation
 
@@ -57,57 +65,79 @@ Download the latest release from the [releases page](https://github.com/briefcas
 
 ## Configuration
 
-### Basic Configuration
+### Quick Setup with .env File
 
-1. **Create a configuration file** named `config.toml`:
-
-```toml
-# Server configuration
-[server]
-host = "127.0.0.1"
-port = 8080
-workers = 4
-
-# Database configuration
-[database]
-path = "data/briefxai.db"
-max_connections = 10
-
-# Analysis settings
-[analysis]
-batch_size = 100
-max_concurrent_requests = 10
-timeout_seconds = 300
-
-# Provider configuration
-[providers.openai]
-api_key = "your-openai-api-key"
-model = "gpt-4"
-max_retries = 3
-timeout_ms = 30000
-
-# Optional: Local provider
-[providers.ollama]
-enabled = false
-base_url = "http://localhost:11434"
-model = "llama2"
-```
-
-2. **Set environment variables** (alternative to config file):
+1. **Copy the example environment file:**
    ```bash
-   export BRIEFXAI_SERVER_PORT=8080
-   export BRIEFXAI_OPENAI_API_KEY="your-api-key"
+   cp .env.example .env
    ```
 
+2. **Edit the .env file** with your API keys:
+   ```bash
+   # API Keys (Optional - for premium features)
+   OPENAI_API_KEY=sk-your-key-here
+   GOOGLE_API_KEY=your-gemini-key-here
+   ANTHROPIC_API_KEY=sk-ant-your-key-here
+   
+   # Server Configuration
+   PORT=8080
+   
+   # Feature Flags
+   ENABLE_DEMO_MODE=true
+   MAX_CONVERSATIONS=100
+   MAX_MESSAGES_PER_CONVERSATION=50
+   
+   # Privacy Settings
+   MIN_PRIVACY_THRESHOLD=3
+   ```
+
+3. **No API Keys? No Problem!**
+   - Leave API keys blank to use demo mode
+   - Use local models like Ollama (see below)
+   - Try the built-in example data
+
+### Advanced Configuration (Optional)
+
+For advanced users, create a `config.toml` file:
+
+```toml
+# LLM Settings
+llm_provider = "gemini"  # openai, gemini, ollama, huggingface, vllm
+llm_model = "gemini-1.5-flash"
+embedding_provider = "google"
+embedding_model = "text-embedding-004"
+
+# Cost Control
+max_cost_per_run = 5.0
+rate_limit_requests_per_minute = 10
+batch_size = 3
+
+# Server Settings  
+website_port = 8080
+verbose = true
+```
+
 ### Provider Setup
+
+#### Google Gemini (Recommended - Most Cost-Effective)
+
+1. Visit [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Create a free API key
+3. Add to your `.env` file:
+   ```bash
+   GOOGLE_API_KEY=your-gemini-key-here
+   ```
 
 #### OpenAI
 
 1. Sign up for an [OpenAI account](https://platform.openai.com/)
 2. Generate an API key
-3. Add the key to your configuration
+3. Add to your `.env` file:
+   ```bash
+   OPENAI_API_KEY=sk-your-key-here
+   ```
 
-#### Ollama (Local)
+#### Ollama (Local - No API Keys Required)
 
 1. Install Ollama:
    ```bash
@@ -116,36 +146,41 @@ model = "llama2"
 
 2. Pull a model:
    ```bash
-   ollama pull llama2
+   ollama pull llama3.2:3b  # or llama3.1:8b for better quality
    ```
 
-3. Enable in configuration:
-   ```toml
-   [providers.ollama]
-   enabled = true
-   base_url = "http://localhost:11434"
-   model = "llama2"
-   ```
+3. Ollama will be auto-detected when you run BriefXAI
 
 ## Running BriefXAI
 
-### Web Interface
+### Web Interface (Recommended)
 
 1. **Start the server:**
    ```bash
-   briefxai serve
-   # Or with custom config
-   briefxai serve --config custom-config.toml
+   ./target/release/briefxai ui --port 8080
+   # Or if globally installed:
+   briefxai ui
    ```
 
 2. **Open your browser:**
    Navigate to `http://localhost:8080`
 
-3. **Follow the setup wizard:**
-   - Choose analysis template
-   - Configure providers
-   - Upload conversations
-   - Start analysis
+3. **Choose your data source:**
+   - **Upload Files**: JSON, CSV, PDF, TXT, DOCX (with OCR)
+   - **Use Example Data**: Try with sample conversations
+   - **Paste Data**: Directly paste conversation data
+
+4. **Smart Model Selection:**
+   - Click "🎯 Auto-Detect" buttons for automatic model selection
+   - Or manually choose your preferred models
+   - Cost estimates are shown automatically
+
+5. **Unified Dashboard:**
+   - **Overview**: Key metrics and insights
+   - **Clusters**: Hierarchical conversation groupings
+   - **Visualization**: Interactive UMAP plots
+   - **Browse**: Search and filter conversations
+   - **Export**: Download results in various formats
 
 ### Command Line Interface
 
