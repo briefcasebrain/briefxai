@@ -17,6 +17,7 @@ class LlmProviderEnum(Enum):
     GEMINI = "gemini"
 
 class EmbeddingProviderEnum(Enum):
+    DEMO = "demo"
     OPENAI = "openai"
     HUGGINGFACE = "huggingface"
 
@@ -107,7 +108,7 @@ class ProviderFactory:
     
     @staticmethod
     def create_embedding_provider(
-        provider: EmbeddingProviderEnum,
+        provider,  # Can be EmbeddingProviderEnum or string
         api_key: Optional[str] = None,
         model: str = "default",
         **kwargs
@@ -115,7 +116,21 @@ class ProviderFactory:
         """Create an embedding provider instance"""
         
         try:
-            if provider == EmbeddingProviderEnum.OPENAI:
+            # Convert string to enum if needed
+            if isinstance(provider, str):
+                try:
+                    provider = EmbeddingProviderEnum(provider.lower())
+                except ValueError:
+                    logger.error(f"Unknown embedding provider: {provider}")
+                    return None
+            
+            if provider == EmbeddingProviderEnum.DEMO:
+                from .demo import DemoEmbeddingProvider
+                return DemoEmbeddingProvider(
+                    model=model if model != "default" else "demo-embeddings"
+                )
+            
+            elif provider == EmbeddingProviderEnum.OPENAI:
                 from .openai import OpenAIEmbeddingProvider
                 if not api_key:
                     logger.error("OpenAI API key required")

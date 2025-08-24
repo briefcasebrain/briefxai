@@ -34,8 +34,8 @@ class Config:
         # Use demo provider by default (free, no API keys required)
         self.llm_provider = "demo"
         self.llm_model = "demo-analyzer"
-        self.embedding_provider = "openai"  # Will fallback gracefully
-        self.embedding_model = "text-embedding-3-small"
+        self.embedding_provider = "demo"  # Use demo embedding for free operation
+        self.embedding_model = "demo-embeddings"
         
         # API keys - empty by default for free deployment
         self.openai_api_key = os.environ.get('OPENAI_API_KEY', '')
@@ -101,12 +101,14 @@ def get_clio_pipeline():
             model=config.llm_model
         )
         
+        # Create embedding provider (demo provider works without API keys)
         embedding_provider = ProviderFactory.create_embedding_provider(
             config.embedding_provider,
-            api_key=config.openai_api_key,
+            api_key=config.openai_api_key if config.embedding_provider != "demo" else "",
             model=config.embedding_model
         )
         
+        # Create pipeline if both providers are available
         if llm_provider and embedding_provider:
             clio_pipeline = ClioAnalysisPipeline(
                 llm_provider=llm_provider,
