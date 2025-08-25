@@ -126,3 +126,17 @@ scripts/start-briefx.sh
 scripts/access-briefx.html
 docs/deployment/DEPLOYMENT_STATUS.md
 docs/deployment/COST_OPTIMIZATION.md
+docs/LLM_Integration_Plan.md
+.vercel
+
+# Additional deployment files
+CLOUD_DEPLOY.md
+DEPLOY.md
+VERCEL_DEPLOY.md
+api/
+cloudbuild-simple.yaml
+deploy-cloud.sh
+deploy-final.sh
+deploy-simple.sh
+requirements.txt
+run-local.py
