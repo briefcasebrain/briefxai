@@ -5,6 +5,8 @@
 
 A high-performance conversation analysis platform for extracting insights from conversational data at scale.
 
+Try the free, hosted version out here: [https://xai.briefcasebrain.io/](https://xai.briefcasebrain.io/)
+
 > **Note**: This repository contains both Python and Rust implementations. **The Python implementation is the active, maintained version**. The Rust implementation is deprecated and no longer maintained.
 
 ## Overview
