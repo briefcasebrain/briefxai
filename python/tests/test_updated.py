@@ -142,6 +142,7 @@ def main():
         ("API Functionality", test_api_functionality),
     ]
     
+    results = {}
     passed = 0
     total = len(tests)
     
@@ -149,17 +150,21 @@ def main():
         try:
             if test_func():
                 passed += 1
+                results[name] = True
+            else:
+                results[name] = False
         except Exception as e:
             print(f"\n{name}")
             print("-" * 40)
             print(f"✗ Unexpected error: {e}")
+            results[name] = False
     
     print("\n" + "=" * 50)
     print("TEST SUMMARY")
     print("=" * 50)
     
-    for name, _ in tests:
-        status = "✓ PASSED" if name in ["Core Modules", "Data Models", "Provider System", "CLI Functionality", "API Functionality"] else "✗ FAILED"
+    for name, success in results.items():
+        status = "✓ PASSED" if success else "✗ FAILED"
         print(f"{name:<20} {status}")
     
     print("-" * 50)
