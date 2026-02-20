@@ -12,14 +12,17 @@ def setup_logging(verbose: bool = False, debug: bool = False):
     """Setup logging configuration"""
     level = logging.DEBUG if debug else (logging.INFO if verbose else logging.WARNING)
     
+    handlers = [logging.StreamHandler(sys.stdout)]
+
+    # Only add file handler when not running under pytest
+    if "pytest" not in sys.modules:
+        handlers.append(logging.FileHandler('briefx.log'))
+
     logging.basicConfig(
         level=level,
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S',
-        handlers=[
-            logging.StreamHandler(sys.stdout),
-            logging.FileHandler('briefx.log')
-        ]
+        handlers=handlers
     )
     
     # Reduce noise from external libraries

@@ -620,6 +620,7 @@ class TestFlaskApp:
         response = client.get('/')
         assert response.status_code == 200, \
             "Root path failed - likely wrong static_folder path"
+        response.close()
 
 
 # ============================================================================
