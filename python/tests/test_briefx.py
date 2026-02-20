@@ -8,15 +8,15 @@ import json
 import sys
 from pathlib import Path
 
-# Add current directory to path
-sys.path.insert(0, str(Path(__file__).parent))
+# Add parent directory to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.examples import generate_example_conversations
-from src.data.models import ConversationData
-from src.preprocessing.smart_preprocessor import SmartPreprocessor
-from src.preprocessing.validators import CompositeValidator
-from src.monitoring import monitoring_system
-from src.error_recovery import error_recovery_system
+from briefx.examples import generate_example_conversations
+from briefx.data.models import ConversationData
+from briefx.preprocessing.smart_preprocessor import SmartPreprocessor
+from briefx.preprocessing.validators import CompositeValidator
+from briefx.monitoring import monitoring_system
+from briefx.error_recovery import error_recovery_system
 
 
 def test_data_models():
@@ -91,6 +91,9 @@ def test_monitoring():
     print(f"✓ Monitoring working (health: {health.status.value})")
 
 
+import pytest
+
+@pytest.mark.asyncio
 async def test_error_recovery():
     """Test error recovery system"""
     print("Testing error recovery...")

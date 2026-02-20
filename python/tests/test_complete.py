@@ -7,8 +7,8 @@ import json
 import sys
 from pathlib import Path
 
-# Add current directory to path
-sys.path.insert(0, str(Path(__file__).parent))
+# Add parent directory to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 def test_core_modules():
     """Test core module imports and basic functionality"""
@@ -16,10 +16,10 @@ def test_core_modules():
     print("-" * 40)
     
     try:
-        from src.examples import generate_example_conversations
-        from src.preprocessing import SmartPreprocessor
-        from src.monitoring import monitoring_system
-        from src.error_recovery import error_recovery_system
+        from briefx.examples import generate_example_conversations
+        from briefx.preprocessing import SmartPreprocessor
+        from briefx.monitoring import monitoring_system
+        from briefx.error_recovery import error_recovery_system
         print("✓ All core modules imported")
         
         # Generate examples
@@ -109,7 +109,7 @@ def test_data_models():
     print("-" * 40)
     
     try:
-        from src.data.models import ConversationData, Message
+        from briefx.data.models import ConversationData, Message
         
         # Create test message
         msg = Message(role="user", content="Test message")
@@ -133,7 +133,7 @@ def test_providers():
     print("-" * 40)
     
     try:
-        from src.providers.factory import get_available_providers
+        from briefx.providers.factory import get_available_providers
         
         providers = get_available_providers()
         print(f"✓ Available providers: {len(providers)}")
