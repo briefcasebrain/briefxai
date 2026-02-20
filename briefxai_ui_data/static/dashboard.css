@@ -1,26 +1,36 @@
 /* Modern Dashboard Styles - BriefXAI */
 
 :root {
-    /* Color Palette */
-    --primary: #6366f1;
-    --primary-dark: #4f46e5;
-    --primary-light: #818cf8;
-    --secondary: #22d3ee;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --danger: #ef4444;
-    --dark: #1e293b;
-    --gray-900: #0f172a;
-    --gray-800: #1e293b;
-    --gray-700: #334155;
-    --gray-600: #475569;
-    --gray-500: #64748b;
-    --gray-400: #94a3b8;
-    --gray-300: #cbd5e1;
-    --gray-200: #e2e8f0;
-    --gray-100: #f1f5f9;
+    /* BriefcaseBrain Design Tokens */
+    --primary: #3388ff;
+    --primary-dark: #4151da;
+    --primary-light: #ebf4ff;
+    --primary-muted: rgba(51,136,255,0.12);
+    --secondary: #0d0d12;
+    --success: #00811a;
+    --success-light: #ecfaec;
+    --warning: #c47100;
+    --warning-light: #fff9ed;
+    --danger: #eb6131;
+    --danger-light: #fff5f5;
+    --dark: #0d0d12;
+    --navy: #0d0d12;
+    --navy-dark: #03152f;
+    --navy-light: #2c2c2e;
+    --gray-900: #0d0d12;
+    --gray-800: #2a2a33;
+    --gray-700: #3d3d46;
+    --gray-600: #55555e;
+    --gray-500: #a0a0a8;
+    --gray-400: #c8c8cf;
+    --gray-300: #e3e3e8;
+    --gray-200: #eeeff2;
+    --gray-100: #f7f7f7;
     --white: #ffffff;
-    
+    --border: #eeeff2;
+    --border-medium: #e3e3e8;
+    --gradient-primary: linear-gradient(172deg, #3388ff 0%, #4151da 100%);
+
     /* Spacing */
     --spacing-xs: 0.25rem;
     --spacing-sm: 0.5rem;
@@ -28,7 +38,7 @@
     --spacing-lg: 1.5rem;
     --spacing-xl: 2rem;
     --spacing-2xl: 3rem;
-    
+
     /* Typography */
     --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --font-size-xs: 0.75rem;
@@ -38,16 +48,17 @@
     --font-size-xl: 1.25rem;
     --font-size-2xl: 1.5rem;
     --font-size-3xl: 2rem;
-    
-    /* Borders & Shadows */
-    --border-radius: 0.5rem;
-    --border-radius-sm: 0.25rem;
-    --border-radius-lg: 0.75rem;
-    --border-radius-xl: 1rem;
-    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+
+    /* Borders & Shadows (blue-tinted per bc design system) */
+    --border-radius: 8px;
+    --border-radius-sm: 6px;
+    --border-radius-lg: 12px;
+    --border-radius-xl: 16px;
+    --border-radius-full: 9999px;
+    --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 16px rgba(74, 127, 255, 0.3);
+    --shadow-lg: 0 8px 28px rgba(74, 127, 255, 0.4);
+    --shadow-xl: 0 24px 80px rgba(0, 0, 0, 0.1), 0 4px 16px rgba(0, 0, 0, 0.05);
     
     /* Layout */
     --top-bar-height: 56px;
@@ -58,24 +69,25 @@
 
 /* Dark Theme Variables */
 [data-theme="dark"] {
-    --bg-primary: var(--gray-900);
+    --bg-primary: var(--navy);
     --bg-secondary: var(--gray-800);
     --bg-tertiary: var(--gray-700);
     --text-primary: var(--gray-100);
     --text-secondary: var(--gray-300);
     --text-tertiary: var(--gray-400);
-    --border-color: var(--gray-700);
+    --border-color: var(--navy-light);
 }
 
-/* Light Theme Variables */
-[data-theme="light"] {
+/* Light Theme Variables (default) */
+[data-theme="light"],
+:root {
     --bg-primary: var(--white);
-    --bg-secondary: var(--gray-50);
+    --bg-secondary: var(--gray-100);
     --bg-tertiary: var(--gray-100);
-    --text-primary: var(--gray-900);
-    --text-secondary: var(--gray-700);
+    --text-primary: var(--navy);
+    --text-secondary: var(--gray-600);
     --text-tertiary: var(--gray-500);
-    --border-color: var(--gray-200);
+    --border-color: var(--border);
 }
 
 /* Base Styles */

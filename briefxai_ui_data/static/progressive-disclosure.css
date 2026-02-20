@@ -8,7 +8,7 @@
 
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(172deg, #3388ff 0%, #4151da 100%);
     min-height: 100vh;
     color: #1a1a1a;
     overflow-x: hidden;
@@ -102,7 +102,7 @@ body {
 
 .simple-upload-area:hover,
 .simple-upload-area.dragover {
-    border-color: #6366f1;
+    border-color: #3388ff;
     background: #f0f4ff;
     transform: translateY(-2px);
 }
@@ -241,13 +241,13 @@ body {
 }
 
 .insight-card:hover {
-    border-color: #6366f1;
+    border-color: #3388ff;
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.15);
+    box-shadow: 0 8px 25px rgba(51,136,255, 0.15);
 }
 
 .insight-card.primary {
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+    background: linear-gradient(135deg, #3388ff 0%, #8b5cf6 100%);
     color: white;
 }
 
@@ -328,9 +328,9 @@ body {
 }
 
 .suggestion-card:hover {
-    border-color: #6366f1;
+    border-color: #3388ff;
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.15);
+    box-shadow: 0 8px 25px rgba(51,136,255, 0.15);
 }
 
 .suggestion-icon {
@@ -400,11 +400,11 @@ body {
 
 .nav-tab:hover {
     background: #f0f4ff;
-    color: #6366f1;
+    color: #3388ff;
 }
 
 .nav-tab.active {
-    background: #6366f1;
+    background: #3388ff;
     color: white;
 }
 
@@ -525,7 +525,7 @@ body {
 .stat-number {
     font-size: 2rem;
     font-weight: 700;
-    color: #6366f1;
+    color: #3388ff;
 }
 
 .stat-label {
@@ -729,14 +729,14 @@ body {
 }
 
 .btn-primary {
-    background: #6366f1;
+    background: #3388ff;
     color: white;
 }
 
 .btn-primary:hover {
     background: #5856eb;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    box-shadow: 0 4px 12px rgba(51,136,255, 0.3);
 }
 
 .btn-secondary {
@@ -763,7 +763,7 @@ body {
 
 .btn-link {
     background: none;
-    color: #6366f1;
+    color: #3388ff;
     padding: 0.25rem 0;
 }
 
@@ -782,7 +782,7 @@ body.expert-mode .expert-only {
 }
 
 body.expert-mode .nav-tabs {
-    background: rgba(99, 102, 241, 0.1);
+    background: rgba(51,136,255,0.08);
     border-radius: 8px;
     padding: 0.25rem;
 }
@@ -1013,8 +1013,8 @@ select, input[type="text"], input[type="search"], input[type="date"], input[type
 
 select:focus, input:focus {
     outline: none;
-    border-color: #6366f1;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    border-color: #3388ff;
+    box-shadow: 0 0 0 3px rgba(51,136,255,0.08);
 }
 
 /* Animation Classes */

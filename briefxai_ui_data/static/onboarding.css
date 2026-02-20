@@ -7,7 +7,7 @@
 
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(172deg, #3388ff 0%, #4151da 100%);
     min-height: 100vh;
     overflow: hidden;
 }
@@ -109,9 +109,9 @@ body {
 }
 
 .feature-card:hover {
-    border-color: #6366f1;
+    border-color: #3388ff;
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.15);
+    box-shadow: 0 8px 25px rgba(51,136,255, 0.15);
 }
 
 .feature-icon {
@@ -148,7 +148,7 @@ body {
 .step-number {
     width: 40px;
     height: 40px;
-    background: #6366f1;
+    background: #3388ff;
     color: white;
     border-radius: 50%;
     display: flex;
@@ -200,13 +200,13 @@ body {
 }
 
 .data-option:hover {
-    border-color: #6366f1;
+    border-color: #3388ff;
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.15);
+    box-shadow: 0 8px 25px rgba(51,136,255, 0.15);
 }
 
 .data-option.selected {
-    border-color: #6366f1;
+    border-color: #3388ff;
     background: #f0f4ff;
 }
 
@@ -239,7 +239,7 @@ body {
 
 .upload-zone:hover,
 .upload-zone.dragover {
-    border-color: #6366f1;
+    border-color: #3388ff;
     background: #f0f4ff;
 }
 
@@ -275,7 +275,7 @@ body {
 
 .example-stats span {
     background: #f0f4ff;
-    color: #6366f1;
+    color: #3388ff;
     padding: 0.5rem 1rem;
     border-radius: 20px;
     font-size: 0.9rem;
@@ -308,7 +308,7 @@ body {
 }
 
 .integration-btn:not(:disabled):hover {
-    border-color: #6366f1;
+    border-color: #3388ff;
 }
 
 .integration-btn span {
@@ -375,8 +375,8 @@ body {
 }
 
 .config-option input[type="checkbox"]:checked + .checkmark {
-    background: #6366f1;
-    border-color: #6366f1;
+    background: #3388ff;
+    border-color: #3388ff;
 }
 
 .config-option input[type="checkbox"]:checked + .checkmark::after {
@@ -426,7 +426,7 @@ body {
 }
 
 .preview-estimate {
-    color: #6366f1;
+    color: #3388ff;
     font-weight: 500;
     background: white;
     padding: 0.5rem 1rem;
@@ -443,7 +443,7 @@ body {
     background: white;
     padding: 1rem 1.5rem;
     border-radius: 8px;
-    border-left: 4px solid #6366f1;
+    border-left: 4px solid #3388ff;
     font-weight: 500;
     color: #1a1a1a;
 }
@@ -491,7 +491,7 @@ body {
     width: 100%;
     height: 100%;
     border-radius: 50%;
-    border: 8px solid #6366f1;
+    border: 8px solid #3388ff;
     border-top: 8px solid transparent;
     border-right: 8px solid transparent;
     transform: rotate(-90deg);
@@ -529,7 +529,7 @@ body {
 
 .progress-bar-fill {
     height: 100%;
-    background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    background: linear-gradient(90deg, #3388ff, #8b5cf6);
     border-radius: 4px;
     transition: width 0.3s ease;
 }
@@ -577,7 +577,7 @@ body {
 }
 
 .insight-item.info {
-    border-left: 4px solid #6366f1;
+    border-left: 4px solid #3388ff;
 }
 
 .insight-icon {
@@ -611,7 +611,7 @@ body {
 .stat-number {
     font-size: 2rem;
     font-weight: bold;
-    color: #6366f1;
+    color: #3388ff;
     margin-bottom: 0.5rem;
 }
 
@@ -663,9 +663,9 @@ body {
 }
 
 .exploration-card:hover {
-    border-color: #6366f1;
+    border-color: #3388ff;
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.15);
+    box-shadow: 0 8px 25px rgba(51,136,255, 0.15);
 }
 
 .card-icon {
@@ -710,14 +710,14 @@ body {
 }
 
 .btn-primary {
-    background: #6366f1;
+    background: #3388ff;
     color: white;
 }
 
 .btn-primary:hover:not(:disabled) {
     background: #5856eb;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    box-shadow: 0 4px 12px rgba(51,136,255, 0.3);
 }
 
 .btn-primary:disabled {
