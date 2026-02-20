@@ -13,7 +13,7 @@ from .clustering import ConversationClusterer
 from .dimensionality import reduce_embeddings_for_clustering, reduce_embeddings_for_visualization
 from .session_manager import session_manager
 from ..prompts import AdvancedPromptManager
-from config import BriefXConfig, LlmProvider, EmbeddingProvider as EmbeddingProviderEnum
+from ..config import BriefXConfig, LlmProvider, EmbeddingProvider as EmbeddingProviderEnum, get_default_config
 
 logger = logging.getLogger(__name__)
 
@@ -364,9 +364,15 @@ class AnalysisPipeline:
 # Global pipeline instance (will be initialized with config)
 pipeline: Optional[AnalysisPipeline] = None
 
-def initialize_pipeline(config: BriefXConfig):
-    """Initialize the global pipeline instance"""
+def initialize_pipeline(config: BriefXConfig = None):
+    """Initialize the global pipeline instance.
+
+    If no config is provided, uses default configuration based on
+    available environment variables.
+    """
     global pipeline
+    if config is None:
+        config = get_default_config()
     pipeline = AnalysisPipeline(config)
 
 def get_pipeline() -> AnalysisPipeline:

@@ -52,7 +52,8 @@ async def init_persistence():
         # Fall back to basic session manager
         persistence_manager = None
 
-app = Flask(__name__, static_folder='briefxai_ui_data', static_url_path='')
+_ui_data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'briefxai_ui_data')
+app = Flask(__name__, static_folder=_ui_data_dir, static_url_path='')
 CORS(app)
 
 # Initialize persistence on startup (optional)
@@ -75,38 +76,41 @@ def get_clio_pipeline():
     """Get or create Clio analysis pipeline"""
     global clio_pipeline
     if clio_pipeline is None:
+        from briefx.config import get_default_config
+        app_config = get_default_config()
+
         # Create providers using factory
         llm_provider = ProviderFactory.create_llm_provider(
-            config.llm_provider, 
-            api_key=config.openai_api_key or config.anthropic_api_key,
-            model=config.llm_model
+            app_config.llm_provider,
+            api_key=app_config.openai_api_key or app_config.anthropic_api_key,
+            model=app_config.llm_model
         )
-        
+
         embedding_provider = ProviderFactory.create_embedding_provider(
-            config.embedding_provider,
-            api_key=config.openai_api_key,
-            model=config.embedding_model
+            app_config.embedding_provider,
+            api_key=app_config.openai_api_key,
+            model=app_config.embedding_model
         )
-        
+
         if llm_provider and embedding_provider:
             clio_pipeline = ClioAnalysisPipeline(
                 llm_provider=llm_provider,
                 embedding_provider=embedding_provider,
                 session_manager=session_manager
             )
-    
+
     return clio_pipeline
 
 # Serve the main UI
 @app.route('/')
 def index():
-    return send_from_directory('briefxai_ui_data', 'index.html')
+    return send_from_directory(_ui_data_dir, 'index.html')
 
 # Serve static files
 @app.route('/<path:path>')
 def serve_static(path):
-    if os.path.exists(os.path.join('briefxai_ui_data', path)):
-        return send_from_directory('briefxai_ui_data', path)
+    if os.path.exists(os.path.join(_ui_data_dir, path)):
+        return send_from_directory(_ui_data_dir, path)
     return "Not found", 404
 
 @app.route('/api/health')

@@ -45,12 +45,17 @@ class SessionInfo:
     total_steps: int = 100
     metadata: Dict[str, Any] = None
     events: List[SessionEvent] = None
-    
+
     def __post_init__(self):
         if self.metadata is None:
             self.metadata = {}
         if self.events is None:
             self.events = []
+
+    @property
+    def current_message(self) -> str:
+        """Alias for current_step, used by app.py endpoints."""
+        return self.current_step
 
 class SessionManager:
     """Advanced session management with persistence and event streaming"""
@@ -218,6 +223,10 @@ class SessionManager:
     def get_session(self, session_id: str) -> Optional[SessionInfo]:
         """Get session information"""
         return self.sessions.get(session_id)
+
+    def get_session_info(self, session_id: str) -> Optional[SessionInfo]:
+        """Alias for get_session(), used by app.py endpoints."""
+        return self.get_session(session_id)
     
     def get_session_progress(self, session_id: str) -> Dict[str, Any]:
         """Get session progress information"""

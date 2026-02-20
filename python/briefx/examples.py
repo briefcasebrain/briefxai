@@ -298,7 +298,7 @@ def save_examples_to_file(
     import json
     
     data = {
-        "conversations": [conv.dict() for conv in conversations],
+        "conversations": [conv.to_dict() for conv in conversations],
         "metadata": {
             "total": len(conversations),
             "generated_at": datetime.utcnow().isoformat(),

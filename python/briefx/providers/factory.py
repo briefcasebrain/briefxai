@@ -10,9 +10,10 @@ from .base import LLMProvider, EmbeddingProvider
 # Define provider enums
 class LlmProviderEnum(Enum):
     OPENAI = "openai"
-    ANTHROPIC = "anthropic" 
+    ANTHROPIC = "anthropic"
     HUGGINGFACE = "huggingface"
     OLLAMA = "ollama"
+    GEMINI = "gemini"
 
 class EmbeddingProviderEnum(Enum):
     OPENAI = "openai"
