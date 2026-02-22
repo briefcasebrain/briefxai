@@ -1,28 +1,25 @@
 # BriefX
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Build Status](https://img.shields.io/badge/build-passing-brightgreen.svg)](https://github.com/briefcasebrain/briefxai)
 
 A high-performance conversation analysis platform for extracting insights from conversational data at scale.
 
-Try the free, hosted version out here: [https://xai.briefcasebrain.io/](https://xai.briefcasebrain.io/)
-
-> **Note**: This repository contains both Python and Rust implementations. **The Python implementation is the active, maintained version**. The Rust implementation is deprecated and no longer maintained.
+Try the free, hosted version here: [https://xai.briefcasebrain.io/](https://xai.briefcasebrain.io/)
 
 ## Overview
 
-BriefX provides enterprise-grade conversation analysis capabilities with advanced clustering algorithms and pattern discovery methodologies. Built for performance, privacy, and scalability.
+BriefX provides enterprise-grade conversation analysis with advanced clustering algorithms and pattern discovery based on the [Clio methodology](https://arxiv.org/html/2412.13678v1). Built for performance, privacy, and scalability.
 
 ## Features
 
 ### Core Capabilities
 - **Advanced Clustering** - Multi-level conversation grouping with hierarchical analysis
-- **Facet Extraction** - Automatic identification of topics, sentiments, intents, and entities  
+- **Facet Extraction** - Automatic identification of topics, sentiments, intents, and entities
 - **Privacy Protection** - PII detection and threshold-based anonymization
 - **Real-time Processing** - Stream processing with WebSocket support
-- **Multi-provider Support** - Compatible with various LLM providers (OpenAI, Anthropic, local models)
+- **Multi-provider Support** - OpenAI, Anthropic, Google Gemini, Ollama, and HuggingFace
 
-### Technical Features  
+### Technical Features
 - Concurrent processing for high throughput
 - Session persistence with pause/resume capability
 - Efficient caching and batch processing
@@ -32,36 +29,32 @@ BriefX provides enterprise-grade conversation analysis capabilities with advance
 
 ## Quick Start
 
-### Python Implementation (Active)
-
-1. **Navigate to Python Directory**
+1. **Navigate to Python directory**
    ```bash
    cd python/
    ```
 
-2. **Install Dependencies**
+2. **Install dependencies**
    ```bash
    pip install -r requirements.txt
    ```
 
-3. **Set Environment Variables**
+3. **Set environment variables**
    ```bash
    export OPENAI_API_KEY="your-api-key-here"
    # or
-   export ANTHROPIC_API_KEY="your-api-key-here" 
+   export ANTHROPIC_API_KEY="your-api-key-here"
    ```
 
-4. **Run Web Interface**
+4. **Run the web interface**
    ```bash
    python app.py
    ```
 
-5. **Access Interface**
-   Open http://localhost:8080 in your browser
+5. **Open in your browser**
+   Navigate to http://localhost:8080
 
-### Rust Implementation (Deprecated)
-
-> ⚠️ **Deprecated**: The Rust implementation is no longer maintained. Use the Python implementation above.
+See [docs/quickstart.md](docs/quickstart.md) for a more detailed walkthrough.
 
 ## Usage Examples
 
@@ -69,18 +62,13 @@ BriefX provides enterprise-grade conversation analysis capabilities with advance
 
 ```python
 from briefx.data.models import ConversationData, Message
-from briefx.examples import generate_example_conversations
+from briefx.analysis.pipeline import AnalysisPipeline
 
-# Create conversation data
-conversations = [
-    ConversationData(messages=[
-        Message(role="user", content="I need help with my order"),
-        Message(role="assistant", content="I'd be happy to help with your order")
-    ])
-]
+# Create pipeline
+pipeline = AnalysisPipeline()
 
-# Or generate examples for testing
-test_conversations = generate_example_conversations(count=5, seed=42)
+# Analyze conversations
+results = pipeline.analyze(conversations)
 ```
 
 ### REST API
@@ -95,70 +83,58 @@ curl -X POST http://localhost:8080/api/conversations \
 curl http://localhost:8080/api/analysis/results
 ```
 
-## Configuration
-
-### Environment Variables
-- `OPENAI_API_KEY` - OpenAI API key
-- `ANTHROPIC_API_KEY` - Anthropic API key
-- `BRIEFX_PORT` - Server port (default: 8080)
-- `BRIEFX_HOST` - Server host (default: 127.0.0.1)
-- `BRIEFX_LOG_LEVEL` - Log level (default: INFO)
-
-### Configuration File
-Create `config.toml`:
-
-```toml
-[server]
-host = "127.0.0.1"
-port = 8080
-
-[analysis]
-batch_size = 100
-max_concurrent_requests = 10
-
-[providers.openai]
-enabled = true
-model = "gpt-4"
-api_key = "${OPENAI_API_KEY}"
-```
-
-See `docs/configuration.md` for complete configuration options.
-
-## Architecture
-
-- **Data Models** - Structured conversation and analysis data types
-- **Preprocessing** - Text normalization, validation, and language detection
-- **Analysis Pipeline** - Clustering, facet extraction, and pattern discovery
-- **Provider System** - Pluggable LLM and embedding provider architecture
-- **Web Interface** - Interactive visualization and analysis tools
-- **Persistence** - Session management and result caching
-
-## Development
-
-### Python Development (Active)
+### CLI
 
 ```bash
-# Navigate to Python directory
 cd python/
-
-# Install development dependencies
-pip install -r requirements.txt
-
-# Run tests
-python tests/test_updated.py
-
-# Use CLI tools
 python cli_simple.py --help
 python cli_simple.py generate --count 5
 python cli_simple.py test
+```
+
+## Configuration
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `OPENAI_API_KEY` | OpenAI API key | — |
+| `ANTHROPIC_API_KEY` | Anthropic API key | — |
+| `GOOGLE_API_KEY` | Google Gemini API key | — |
+| `DATABASE_URL` | Database connection string | SQLite (local) |
+| `BRIEFX_PORT` | Server port | `8080` |
+| `BRIEFX_HOST` | Server host | `127.0.0.1` |
+| `BRIEFX_LOG_LEVEL` | Log level | `INFO` |
+
+See [docs/configuration.md](docs/configuration.md) for all configuration options.
+
+## Architecture
+
+- **Flask Web Server** - REST API and WebSocket endpoints
+- **Analysis Pipeline** - Clustering, facet extraction, and pattern discovery
+- **Provider System** - Pluggable LLM and embedding provider architecture
+- **Clio Engine** - Privacy-preserving hierarchical conversation analysis
+- **Web Interface** - Interactive visualization and analysis dashboard
+- **Persistence** - SQLite (default) or PostgreSQL session management
+
+See [docs/architecture.md](docs/architecture.md) for a full system overview.
+
+## Development
+
+```bash
+cd python/
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run tests
+python -m pytest tests/
 
 # Start development server
 python app.py
 ```
 
-### Rust Development (Deprecated)
-
-> ⚠️ **Deprecated**: The Rust implementation is no longer maintained.
+See [docs/development.md](docs/development.md) for the full development guide.
 
 ## API Documentation
 
@@ -175,22 +151,17 @@ python app.py
 - `/ws/analysis` - Real-time analysis updates
 - `/ws/progress` - Analysis progress updates
 
-See `docs/api.md` for complete API documentation.
+See [docs/api.md](docs/api.md) for complete API documentation.
 
-## Performance
+## Deployment
 
-### Benchmarks (Python Implementation)
-- **Throughput**: 1000+ conversations/minute
-- **Memory Usage**: ~512MB for 10k conversations  
-- **Clustering**: 100 conversations clustered in <5 seconds
-- **Facet Extraction**: 50ms average per conversation
-- **API Response Time**: <100ms for most endpoints
+BriefX is a Flask + Gunicorn application deployable to any container platform. See [docs/deployment.md](docs/deployment.md) for cost-optimized deployment guides for Google Cloud, AWS, and Vercel.
 
 ## Privacy & Security
 
 - **PII Detection** - Automatic detection of emails, phone numbers, addresses
 - **Data Anonymization** - Configurable masking and removal policies
-- **Local Processing** - Option to run entirely offline with local models
+- **Local Processing** - Option to run entirely offline with Ollama
 - **Secure Storage** - Encrypted data persistence options
 - **Access Control** - API key authentication and rate limiting
 
@@ -204,11 +175,10 @@ Please read [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduc
 
 ## Support
 
-For questions and support:
 - Check the [documentation](docs/)
 - Review [examples](python/briefx/examples.py)
 - Use the CLI: `python python/cli_simple.py --help`
-- Open an issue on GitHub
+- Open an issue on [GitHub](https://github.com/briefcasebrain/briefxai/issues)
 
 ## Changelog
 

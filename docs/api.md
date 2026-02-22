@@ -470,80 +470,52 @@ X-RateLimit-Reset: 1705318800
 ### Python
 
 ```python
-import briefxai
+import requests
 
-client = briefxai.Client(api_key="YOUR_API_KEY")
+BASE_URL = "http://localhost:8080/api"
 
-# Create session
-session = client.create_session(
-    name="Q1 Analysis",
-    template="customer_support"
-)
+# Create a session
+session = requests.post(f"{BASE_URL}/sessions", json={
+    "name": "Q1 Analysis",
+    "config": {"template": "customer_support", "provider": "openai"}
+}).json()
 
 # Start analysis
-result = client.analyze(
-    session_id=session.id,
-    conversations=conversations,
-    wait=True  # Wait for completion
-)
+requests.post(f"{BASE_URL}/sessions/{session['session_id']}/analyze", json={
+    "conversations": conversations,
+    "options": {"extract_facets": True, "perform_clustering": True}
+})
 
-# Export results
-export = client.export(
-    session_id=session.id,
-    format="csv"
-)
+# Get results
+results = requests.get(f"{BASE_URL}/sessions/{session['session_id']}/results").json()
 ```
 
 ### JavaScript/TypeScript
 
 ```typescript
-import { BriefXAI } from 'briefxai-sdk';
+const BASE_URL = 'http://localhost:8080/api';
 
-const client = new BriefXAI({ apiKey: 'YOUR_API_KEY' });
+// Create session
+const session = await fetch(`${BASE_URL}/sessions`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ name: 'Q1 Analysis', config: { template: 'customer_support' } })
+}).then(r => r.json());
 
-// Create and run analysis
-const session = await client.sessions.create({
-  name: 'Q1 Analysis',
-  template: 'customer_support'
+// Start analysis
+await fetch(`${BASE_URL}/sessions/${session.session_id}/analyze`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ conversations, options: { extract_facets: true } })
 });
 
-const result = await client.analyze({
-  sessionId: session.id,
-  conversations: conversations
-});
-
-// Subscribe to real-time updates
-client.subscribe(session.id, (update) => {
-  console.log(`Progress: ${update.progress.percentage}%`);
-});
-```
-
-### Rust
-
-```rust
-use briefxai_client::{Client, Config};
-
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let client = Client::new(Config {
-        api_key: "YOUR_API_KEY".to_string(),
-        base_url: "http://localhost:8080".to_string(),
-    });
-
-    // Create session
-    let session = client.create_session(
-        "Q1 Analysis",
-        "customer_support"
-    ).await?;
-
-    // Analyze conversations
-    let result = client.analyze(
-        &session.id,
-        conversations
-    ).await?;
-
-    Ok(())
-}
+// Subscribe to real-time updates via WebSocket
+const ws = new WebSocket('ws://localhost:8080/ws');
+ws.onopen = () => ws.send(JSON.stringify({ type: 'subscribe', session_id: session.session_id }));
+ws.onmessage = (event) => {
+  const update = JSON.parse(event.data);
+  console.log(`Progress: ${update.progress?.percentage}%`);
+};
 ```
 
 ## Pagination

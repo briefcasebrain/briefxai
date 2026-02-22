@@ -1,192 +1,166 @@
 # Architecture Overview
 
-BriefXAI is built with a modular, scalable architecture designed for high-performance conversation analysis. This document provides a comprehensive overview of the system design, components, and data flow.
+BriefX is a Python web application built with Flask, implementing the [Clio methodology](https://arxiv.org/html/2412.13678v1) for privacy-preserving conversation analysis at scale.
 
 ## System Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                         Web UI                              │
-│  (React-based Dashboard, WebSocket Client, Visualizations)  │
+│                   Web UI (Static SPA)                       │
+│         (briefxai_ui_data/ — HTML/CSS/JS + D3.js)           │
 └────────────────────────┬────────────────────────────────────┘
                          │ HTTP/WebSocket
 ┌────────────────────────▼────────────────────────────────────┐
-│                     Web Server (Axum)                       │
-│  (REST API, WebSocket Handler, Static File Serving)         │
+│             Web Server (Flask + Gunicorn)                   │
+│      (REST API, WebSocket handler, static file serving)     │
 └────────────────────────┬────────────────────────────────────┘
                          │
 ┌────────────────────────▼────────────────────────────────────┐
-│                   Core Analysis Engine                      │
+│                  Core Analysis Engine                       │
 ├──────────────────────────────────────────────────────────────┤
 │  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐      │
 │  │   Session   │  │ Preprocessing │  │   Provider   │      │
 │  │   Manager   │  │   Pipeline    │  │   Manager    │      │
 │  └─────────────┘  └──────────────┘  └──────────────┘      │
 │  ┌─────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │    Facet    │  │  Embeddings  │  │  Clustering  │      │
-│  │  Extractor  │  │  Generator   │  │   Engine     │      │
+│  │    Clio     │  │  Embeddings  │  │  Clustering  │      │
+│  │   Engine    │  │  (sklearn +  │  │  (sklearn +  │      │
+│  │             │  │   UMAP)      │  │   k-means)   │      │
 │  └─────────────┘  └──────────────┘  └──────────────┘      │
 └────────────────────────┬────────────────────────────────────┘
                          │
 ┌────────────────────────▼────────────────────────────────────┐
 │                    Persistence Layer                        │
-│            (SQLite with Migration System)                   │
+│         (SQLite via aiosqlite / PostgreSQL via asyncpg)     │
 └──────────────────────────────────────────────────────────────┘
 ```
 
 ## Core Components
 
-### 1. Web Server Layer
+### 1. Web Server Layer (`python/app.py`)
 
-The web server is built on Axum, providing:
+Flask application providing:
 
-- **REST API Endpoints**: CRUD operations for sessions, analyses, and configurations
-- **WebSocket Support**: Real-time streaming of analysis results
-- **Static File Serving**: UI assets and documentation
-- **CORS Handling**: Cross-origin resource sharing for web clients
-- **Request Validation**: Input sanitization and validation
+- **REST API Endpoints** — CRUD operations for sessions, analyses, and configurations
+- **WebSocket Support** — Real-time streaming of analysis results
+- **Static File Serving** — SPA assets from `briefxai_ui_data/`
+- **CORS Handling** — Cross-origin resource sharing for web clients
+- **Request Validation** — Input sanitization and format validation
 
-**Key Files:**
-- `src/web.rs` - Main web server implementation
-- `src/web_clio.rs` - Clio-specific endpoints
-
-### 2. Session Manager
+### 2. Session Manager (`briefx/analysis/session_manager.py`)
 
 Manages the lifecycle of analysis sessions:
 
-- **State Management**: Tracks session states (created, running, paused, completed, failed)
-- **Pause/Resume**: Checkpoint-based suspension and resumption
-- **Recovery**: Automatic recovery from failures
-- **Event Broadcasting**: Real-time status updates via channels
-- **Resource Management**: Memory and CPU allocation per session
+- **State Management** — Tracks session states (created, running, paused, completed, failed)
+- **Pause/Resume** — Checkpoint-based suspension and resumption
+- **Event Broadcasting** — Real-time status updates via WebSocket channels
+- **Resource Management** — Concurrent session handling
 
-**Key Files:**
-- `src/analysis/session_manager.rs` - Core session management
-- `src/analysis/streaming.rs` - Real-time result streaming
+### 3. Preprocessing Pipeline (`briefx/preprocessing/`)
 
-### 3. Preprocessing Pipeline
+Data validation and preparation before analysis:
 
-Data validation and preparation:
+- **Format Validation** — Ensures conversation structure compliance
+- **Duplicate Detection** — Identifies and handles repeated conversations
+- **PII Detection** — Scans for and masks sensitive information (emails, phone numbers, etc.)
+- **Language Detection** — Identifies conversation languages using `langdetect`
+- **Smart Preprocessing** — Automated cleaning and normalization
 
-- **Format Validation**: Ensures conversation structure compliance
-- **Duplicate Detection**: Identifies and handles duplicate conversations
-- **PII Detection**: Scans for sensitive information
-- **Language Detection**: Identifies conversation languages
-- **Quality Assessment**: Scores data quality and completeness
-- **Smart Preprocessing**: Automated cleaning and normalization
-
-**Key Files:**
-- `src/preprocessing/mod.rs` - Pipeline orchestration
-- `src/preprocessing/validators.rs` - Validation components
-- `src/preprocessing/language_detector.rs` - Language detection
-- `src/preprocessing/smart_preprocessor.rs` - Data cleaning
-
-### 4. Provider Manager
+### 4. Provider Manager (`briefx/providers/`)
 
 Multi-provider LLM integration:
 
-- **Provider Abstraction**: Unified interface for different LLM providers
-- **Load Balancing**: Multiple strategies (round-robin, least-latency, cost-optimized)
-- **Circuit Breakers**: Fault tolerance with automatic recovery
-- **Rate Limiting**: Request throttling and quota management
-- **Fallback Chains**: Automatic failover to alternative providers
-- **Cost Tracking**: Usage and cost monitoring per provider
+- **Provider Abstraction** — Unified `BaseProvider` interface for different LLM providers
+- **Supported Providers** — OpenAI, Anthropic, Google Gemini, Ollama, HuggingFace
+- **Auto-detection** — Automatically detects available providers from environment variables
+- **Fallback Chains** — Graceful fallback to alternative providers on failure
 
-**Key Files:**
-- `src/llm/provider_manager.rs` - Provider management
-- `src/llm.rs` - LLM interface definitions
+**Key files:**
+- `providers/base.py` — BaseProvider interface
+- `providers/factory.py` — Provider factory and auto-detection
+- `providers/openai.py`, `anthropic.py`, `gemini.py`, `ollama.py`, `huggingface.py`
 
-### 5. Analysis Components
+### 5. Clio Analysis Engine (`briefx/analysis/clio.py`)
 
-#### Facet Extraction
-Extracts structured insights from conversations:
-- Topic identification
-- Sentiment analysis
-- Entity extraction
-- Issue detection
-- Resolution tracking
+Implements the Clio methodology for privacy-preserving conversation analysis:
 
-**File:** `src/facets.rs`
+- **Hierarchical Clustering** — Multi-level conversation grouping
+- **Facet Extraction** — LLM-powered extraction of topics, sentiments, intents, entities
+- **Privacy Thresholds** — Clusters below a minimum size are suppressed to protect individual privacy
+- **Summarization** — Cluster-level summaries at configurable granularity levels
+- **Pattern Discovery** — Cross-cluster trend identification
 
-#### Embedding Generation
-Creates vector representations:
-- Text embeddings for semantic search
-- Conversation embeddings for clustering
-- Multiple embedding model support
-- Caching for performance
+### 6. Embedding & Clustering (`briefx/analysis/`)
 
-**File:** `src/embeddings.rs`
+Vector-space analysis:
 
-#### Clustering Engine
-Groups similar conversations:
-- K-means clustering
-- Hierarchical clustering
-- Dynamic cluster sizing
-- Outlier detection
+- **Embeddings** — Text embeddings via LLM provider APIs or local HuggingFace models
+- **Dimensionality Reduction** — UMAP projections for visualization (`dimensionality.py`)
+- **Clustering** — K-means and hierarchical clustering via scikit-learn (`clustering.py`)
+- **Similarity Search** — Cosine similarity for nearest-neighbor lookup
 
-**File:** `src/clustering.rs`
+### 7. Persistence Layer (`briefx/persistence/`)
 
-### 6. Persistence Layer
+Async database layer supporting both SQLite and PostgreSQL:
 
-SQLite-based storage with:
-
-- **Migration System**: Version-controlled schema updates
-- **Transaction Support**: ACID compliance
-- **Indexing**: Optimized query performance
-- **Caching**: Multi-level caching strategy
-- **Backup/Restore**: Data protection and recovery
-
-**Key Files:**
-- `src/persistence_v2.rs` - Enhanced persistence implementation
-- `migrations/` - SQL migration scripts
+- **SQLite** — Default for local development via `aiosqlite`
+- **PostgreSQL** — Recommended for production via `asyncpg`
+- **Session Storage** — Analysis sessions, results, and checkpoints
+- **Response Cache** — LLM response caching to reduce API costs
+- **Migration System** — Version-controlled schema migrations in `migrations/`
 
 ## Data Flow
 
-### 1. Analysis Pipeline
+### Analysis Pipeline
 
 ```
-Input Conversations
+Input Conversations (JSON/CSV/text)
         │
         ▼
 [Preprocessing]
-   - Validation
-   - PII Detection
-   - Language Detection
+   - Format validation
+   - PII detection & masking
+   - Duplicate removal
+   - Language detection
         │
         ▼
 [Facet Extraction]
-   - LLM Processing
-   - Pattern Detection
+   - LLM processing (via provider)
+   - Topic/sentiment/entity extraction
         │
         ▼
 [Embedding Generation]
-   - Vector Creation
-   - Similarity Computation
+   - Text to vector conversion
+   - Similarity computation
+        │
+        ▼
+[Dimensionality Reduction]
+   - UMAP projection to 2D/3D
         │
         ▼
 [Clustering]
-   - Group Formation
-   - Centroid Calculation
+   - K-means / hierarchical grouping
+   - Centroid calculation
+   - Privacy threshold enforcement
         │
         ▼
-[Result Aggregation]
-   - Statistics
-   - Visualizations
+[Summarization]
+   - Cluster-level LLM summaries
+   - Cross-cluster pattern analysis
         │
         ▼
-Output (JSON/CSV/UI)
+Output (Web UI / JSON / CSV / HTML report)
 ```
 
-### 2. Request Lifecycle
+### Request Lifecycle
 
-1. **Client Request**: HTTP/WebSocket request received
-2. **Authentication**: Request validation and authorization
-3. **Session Creation**: New session initialized in database
-4. **Task Queuing**: Analysis tasks queued for processing
-5. **Parallel Processing**: Concurrent task execution
-6. **Result Streaming**: Progressive result delivery
-7. **Persistence**: Results saved to database
-8. **Response**: Final response sent to client
+1. **Client Request** — HTTP/WebSocket request received by Flask
+2. **Validation** — Request format and size checks
+3. **Session Creation** — New session initialized in database
+4. **Async Processing** — Analysis tasks run concurrently via asyncio
+5. **Real-time Streaming** — Progressive results delivered via WebSocket
+6. **Persistence** — Results saved to SQLite/PostgreSQL
+7. **Response** — Final response or download link sent to client
 
 ## Database Schema
 
@@ -228,129 +202,70 @@ CREATE TABLE analysis_results (
 );
 ```
 
-#### `providers`
-```sql
-CREATE TABLE providers (
-    id TEXT PRIMARY KEY,
-    config TEXT NOT NULL,
-    health_status TEXT,
-    metrics TEXT,
-    updated_at TIMESTAMP
-);
-```
+## Frontend (SPA)
 
-## Performance Optimizations
+The frontend is a static single-page application in `briefxai_ui_data/`:
 
-### 1. Concurrency
-- **Tokio Runtime**: Async/await for I/O operations
-- **Thread Pools**: CPU-bound task parallelization
-- **Channel-based Communication**: Lock-free message passing
+- **No build step** — Plain HTML, CSS, and JavaScript
+- **D3.js** — Force-directed graph visualizations and cluster maps
+- **WebSocket client** — Real-time progress and result streaming
+- **Progressive disclosure** — Expertise-based UI adaptation for new vs. advanced users
+- **Served by Flask** — Static file serving at the root URL
 
-### 2. Caching
-- **Memory Cache**: Hot data in RAM
-- **Database Cache**: Query result caching
-- **Embedding Cache**: Reuse computed embeddings
-- **Provider Response Cache**: Reduce API calls
+## Performance Characteristics
 
-### 3. Batching
-- **Request Batching**: Group API calls
-- **Database Batching**: Bulk inserts/updates
-- **Processing Batching**: Optimize throughput
+| Workload | Specification |
+|----------|--------------|
+| API throughput | 1000+ conversations/minute |
+| Memory (10k conversations) | ~512 MB |
+| Clustering (100 conversations) | < 5 seconds |
+| Facet extraction | ~50ms average per conversation |
+| API response time | < 100ms for most endpoints |
 
-### 4. Resource Management
-- **Connection Pooling**: Database connection reuse
-- **Memory Limits**: Prevent OOM conditions
-- **Rate Limiting**: Prevent resource exhaustion
+### Key Optimizations
 
-## Security Considerations
+- **Asyncio** — Non-blocking I/O for concurrent LLM requests
+- **Batch processing** — Groups API calls to minimize round-trips
+- **Response caching** — Avoids repeated LLM calls for identical conversations
+- **Streaming results** — Progressive delivery rather than waiting for full completion
 
-### 1. Data Protection
-- **PII Detection**: Automatic sensitive data identification
-- **Data Encryption**: At-rest and in-transit encryption
-- **Access Control**: Role-based permissions
-- **Audit Logging**: Complete activity tracking
+## Security
 
-### 2. Input Validation
-- **SQL Injection Prevention**: Parameterized queries
-- **XSS Prevention**: Input sanitization
-- **Path Traversal Prevention**: File access restrictions
-- **Size Limits**: Prevent DoS attacks
-
-### 3. Provider Security
-- **API Key Management**: Secure credential storage
-- **TLS/SSL**: Encrypted provider communication
-- **Request Signing**: Authentication verification
-
-## Monitoring & Observability
-
-### 1. Metrics Collection
-- **Prometheus Integration**: Time-series metrics
-- **Custom Metrics**: Business-specific KPIs
-- **Performance Metrics**: Latency, throughput, errors
-
-### 2. Logging
-- **Structured Logging**: JSON-formatted logs
-- **Log Levels**: Configurable verbosity
-- **Correlation IDs**: Request tracing
-- **Error Tracking**: Detailed error context
-
-### 3. Health Checks
-- **Liveness Probe**: System availability
-- **Readiness Probe**: Service readiness
-- **Dependency Checks**: Provider/database status
-
-## Scalability
-
-### Horizontal Scaling
-- **Stateless Design**: No server-side session state
-- **Database Sharding**: Data partitioning support
-- **Load Balancer Ready**: Multiple instance support
-
-### Vertical Scaling
-- **Resource Configuration**: Tunable limits
-- **Memory Management**: Efficient allocation
-- **Connection Pooling**: Scalable connections
+- **PII Detection** — Automatic sensitive data identification and masking
+- **Input Validation** — All user input validated at API boundaries
+- **CORS** — Configurable allowed origins
+- **SQL injection prevention** — Parameterized queries throughout
 
 ## Extension Points
 
-### 1. Custom Providers
-Implement the `LLMProvider` trait:
-```rust
-#[async_trait]
-pub trait LLMProvider {
-    async fn complete(&self, prompt: &str) -> Result<String>;
-    async fn embed(&self, text: &str) -> Result<Vec<f32>>;
-}
+### Custom LLM Provider
+
+Implement the `BaseProvider` interface:
+
+```python
+from briefx.providers.base import BaseProvider
+
+class MyProvider(BaseProvider):
+    async def complete(self, prompt: str, **kwargs) -> str:
+        ...
+
+    async def embed(self, text: str) -> list[float]:
+        ...
 ```
 
-### 2. Custom Preprocessors
-Implement the `Preprocessor` trait:
-```rust
-pub trait Preprocessor {
-    fn process(&self, data: &mut ConversationData) -> Result<()>;
-}
+Register in `providers/factory.py` to make it available via auto-detection.
+
+### Custom Preprocessor
+
+Add a preprocessing step to the pipeline in `briefx/preprocessing/`:
+
+```python
+class MyPreprocessor:
+    def process(self, conversations: list) -> list:
+        # Transform conversations
+        return conversations
 ```
 
-### 3. Custom Analyzers
-Implement the `Analyzer` trait:
-```rust
-#[async_trait]
-pub trait Analyzer {
-    async fn analyze(&self, conversation: &Conversation) -> Result<Analysis>;
-}
-```
+### Custom Analysis Facets
 
-## Future Considerations
-
-### Planned Enhancements
-- **Distributed Processing**: Multi-node support
-- **Stream Processing**: Real-time conversation analysis
-- **Machine Learning Pipeline**: Custom model training
-- **GraphQL API**: Flexible query interface
-- **Plugin System**: Dynamic extension loading
-
-### Research Areas
-- **Advanced NLP**: Deeper semantic understanding
-- **Anomaly Detection**: Unusual pattern identification
-- **Predictive Analytics**: Trend forecasting
-- **Multi-modal Analysis**: Voice/video support
+Add new facet extraction prompts to `briefx/prompts/` and reference them in the Clio configuration.

@@ -1,39 +1,40 @@
-# Getting Started with BriefXAI
+# Getting Started with BriefX
 
-This guide will help you get BriefXAI up and running on your system.
+This guide will help you get BriefX up and running on your system.
 
 ## Prerequisites
 
-Before you begin, ensure you have the following installed:
+Before you begin, ensure you have:
 
-- **Rust** 1.70 or higher ([Install Rust](https://rustup.rs/))
-- **SQLite** 3.35 or higher
+- **Python** 3.9 or higher
+- **pip** for installing Python packages
 - **Git** for cloning the repository
-- **A text editor** for editing configuration files
+- An API key from at least one supported LLM provider (OpenAI, Anthropic, Google Gemini), or a local [Ollama](https://ollama.com) installation
 
 ## Installation
 
-### Option 1: Build from Source (Recommended)
+### Option 1: Standard Installation
 
 1. **Clone the repository:**
    ```bash
    git clone https://github.com/briefcasebrain/briefxai.git
-   cd briefxai
+   cd briefxai/python
    ```
 
-2. **Build the project:**
+2. **Create a virtual environment:**
    ```bash
-   cargo build --release
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
-3. **Run the tests to verify installation:**
+3. **Install dependencies:**
    ```bash
-   cargo test
+   pip install -r requirements.txt
    ```
 
-4. **Install globally (optional):**
+4. **Verify the installation:**
    ```bash
-   cargo install --path .
+   python cli_simple.py --help
    ```
 
 ### Option 2: Using Docker
@@ -46,138 +47,94 @@ Before you begin, ensure you have the following installed:
 2. **Run the container:**
    ```bash
    docker run -p 8080:8080 \
-     -v $(pwd)/data:/data \
-     -v $(pwd)/config.toml:/config.toml \
+     -e OPENAI_API_KEY="your-api-key" \
      briefxai:latest
    ```
 
-### Option 3: Pre-built Binaries
-
-Download the latest release from the [releases page](https://github.com/briefcasebrain/briefxai/releases).
-
 ## Configuration
 
-### Basic Configuration
+### Setting API Keys
 
-1. **Create a configuration file** named `config.toml`:
+BriefX supports multiple LLM providers. Set keys for whichever you plan to use:
 
-```toml
-# Server configuration
-[server]
-host = "127.0.0.1"
-port = 8080
-workers = 4
+```bash
+# OpenAI
+export OPENAI_API_KEY="sk-..."
 
-# Database configuration
-[database]
-path = "data/briefxai.db"
-max_connections = 10
+# Anthropic Claude
+export ANTHROPIC_API_KEY="sk-ant-..."
 
-# Analysis settings
-[analysis]
-batch_size = 100
-max_concurrent_requests = 10
-timeout_seconds = 300
-
-# Provider configuration
-[providers.openai]
-api_key = "your-openai-api-key"
-model = "gpt-4"
-max_retries = 3
-timeout_ms = 30000
-
-# Optional: Local provider
-[providers.ollama]
-enabled = false
-base_url = "http://localhost:11434"
-model = "llama2"
+# Google Gemini
+export GOOGLE_API_KEY="AIza..."
 ```
 
-2. **Set environment variables** (alternative to config file):
-   ```bash
-   export BRIEFXAI_SERVER_PORT=8080
-   export BRIEFXAI_OPENAI_API_KEY="your-api-key"
-   ```
+### Server Configuration
 
-### Provider Setup
+```bash
+# Server host and port
+export BRIEFX_HOST="127.0.0.1"
+export BRIEFX_PORT="8080"
 
-#### OpenAI
+# Log level (DEBUG, INFO, WARNING, ERROR)
+export BRIEFX_LOG_LEVEL="INFO"
+```
 
-1. Sign up for an [OpenAI account](https://platform.openai.com/)
-2. Generate an API key
-3. Add the key to your configuration
+### Database Configuration
 
-#### Ollama (Local)
+BriefX uses SQLite by default for local development. For production, PostgreSQL is recommended:
 
-1. Install Ollama:
-   ```bash
-   curl -fsSL https://ollama.ai/install.sh | sh
-   ```
+```bash
+# SQLite (default - no configuration needed)
+export DATABASE_URL="sqlite:///briefx.db"
 
-2. Pull a model:
-   ```bash
-   ollama pull llama2
-   ```
+# PostgreSQL
+export DATABASE_URL="postgresql://user:password@localhost/briefx"
+```
 
-3. Enable in configuration:
-   ```toml
-   [providers.ollama]
-   enabled = true
-   base_url = "http://localhost:11434"
-   model = "llama2"
-   ```
+### Local Models with Ollama
 
-## Running BriefXAI
+To run BriefX without any cloud API keys:
+
+```bash
+# 1. Install Ollama (https://ollama.com)
+# 2. Pull a model
+ollama pull llama2
+
+# 3. Start BriefX - it will detect Ollama automatically
+python app.py
+```
+
+## Running BriefX
 
 ### Web Interface
 
-1. **Start the server:**
-   ```bash
-   briefxai serve
-   # Or with custom config
-   briefxai serve --config custom-config.toml
-   ```
+```bash
+cd python/
+python app.py
+```
 
-2. **Open your browser:**
-   Navigate to `http://localhost:8080`
-
-3. **Follow the setup wizard:**
-   - Choose analysis template
-   - Configure providers
-   - Upload conversations
-   - Start analysis
+Open http://localhost:8080 in your browser.
 
 ### Command Line Interface
 
-#### Analyze a file:
 ```bash
-briefxai analyze conversations.json \
-  --template customer_support \
-  --output results.json
-```
+cd python/
 
-#### Resume a paused session:
-```bash
-briefxai resume session_abc123
-```
+# Show available commands
+python cli_simple.py --help
 
-#### Export results:
-```bash
-briefxai export session_abc123 \
-  --format csv \
-  --output analysis_results.csv
-```
+# Generate sample conversations for testing
+python cli_simple.py generate --count 50
 
-#### List sessions:
-```bash
-briefxai list-sessions
+# Run a test analysis
+python cli_simple.py test
 ```
 
 ## Your First Analysis
 
 ### Step 1: Prepare Your Data
 
-Create a file named `sample_conversations.json`:
+Create a JSON file with your conversations:
 
 ```json
 [
@@ -190,7 +147,7 @@ Create a file named `sample_conversations.json`:
       },
       {
         "role": "assistant",
-        "content": "I'd be happy to help with your subscription issue. Can you tell me more about what's happening?"
+        "content": "I'd be happy to help. Can you tell me more about the issue?"
       },
       {
         "role": "user",
@@ -198,7 +155,7 @@ Create a file named `sample_conversations.json`:
       },
       {
         "role": "assistant",
-        "content": "I apologize for the double charge. Let me look into that for you right away."
+        "content": "I apologize for the double charge. Let me look into that for you."
       }
     ],
     "metadata": {
@@ -209,133 +166,95 @@ Create a file named `sample_conversations.json`:
 ]
 ```
 
-### Step 2: Run the Analysis
+### Step 2: Upload and Analyze
 
-Using the CLI:
-```bash
-briefxai analyze sample_conversations.json \
-  --template customer_support \
-  --output analysis_results.json
-```
+**Via the web interface:**
 
-Using the Web UI:
-1. Navigate to `http://localhost:8080`
+1. Navigate to http://localhost:8080
 2. Click "New Analysis"
-3. Upload `sample_conversations.json`
-4. Select "Customer Support" template
+3. Upload your JSON file
+4. Select "Customer Support" template (or configure manually)
 5. Click "Start Analysis"
+
+**Via the REST API:**
+
+```bash
+# Upload conversations
+curl -X POST http://localhost:8080/api/conversations \
+  -H "Content-Type: application/json" \
+  -d @conversations.json
+
+# Start analysis
+curl -X POST http://localhost:8080/api/analysis/start \
+  -H "Content-Type: application/json" \
+  -d '{"session_id": "sess_001", "options": {"extract_facets": true, "perform_clustering": true}}'
+
+# Poll for results
+curl http://localhost:8080/api/analysis/results
+```
 
 ### Step 3: View Results
 
-The analysis will extract:
-- **Sentiments**: Customer satisfaction levels
-- **Topics**: Main discussion themes
-- **Issues**: Problems identified
-- **Resolutions**: How issues were resolved
-- **Patterns**: Common trends across conversations
+The analysis extracts:
+- **Sentiments** - Customer satisfaction levels per conversation
+- **Topics** - Main discussion themes
+- **Issues** - Problems identified
+- **Resolutions** - How issues were resolved
+- **Patterns** - Common trends across all conversations
 
 Results are available in:
+- Web dashboard for interactive exploration
 - JSON format for programmatic access
 - CSV format for spreadsheet analysis
-- Web dashboard for interactive exploration
+- HTML reports for sharing
 
 ## Common Use Cases
 
 ### Customer Support Analysis
 
 ```bash
-briefxai analyze support_tickets.json \
-  --template customer_support \
-  --facets "sentiment,issues,resolution_status" \
-  --output support_insights.json
+# Upload support tickets and analyze sentiment and issue types
+curl -X POST http://localhost:8080/api/conversations \
+  -H "Content-Type: application/json" \
+  -d @support_tickets.json
 ```
 
-### Sales Conversation Analysis
+### Privacy-Sensitive Data
 
-```bash
-briefxai analyze sales_calls.json \
-  --template sales \
-  --facets "opportunities,objections,next_steps" \
-  --output sales_analysis.json
-```
+BriefX includes automatic PII detection. For medical or financial conversations, enable strict privacy mode in the analysis settings to mask or remove sensitive identifiers before clustering.
 
-### Medical Consultation Review
+### Large Datasets
 
-```bash
-briefxai analyze consultations.json \
-  --template medical \
-  --facets "symptoms,diagnoses,treatments" \
-  --pii-detection strict \
-  --output medical_insights.json
-```
+For datasets with thousands of conversations, use the batch processing API and monitor progress via the WebSocket endpoint or the real-time dashboard.
 
 ## Troubleshooting
 
-### Common Issues
+### Server won't start
 
-#### Server won't start
-- Check if port 8080 is already in use
-- Verify configuration file syntax
-- Ensure database directory exists and is writable
+- Check if port 8080 is already in use: `lsof -i :8080`
+- Use a different port: `BRIEFX_PORT=3000 python app.py`
 
-#### Analysis fails immediately
-- Verify API keys are correct
-- Check network connectivity
-- Ensure input file format is valid JSON
+### Analysis fails immediately
 
-#### Out of memory errors
-- Reduce batch_size in configuration
-- Process conversations in smaller chunks
-- Increase system memory allocation
+- Verify at least one API key is set: `echo $OPENAI_API_KEY`
+- Check network connectivity to your LLM provider
+- Ensure input file is valid JSON
+
+### High memory usage
+
+- Reduce batch size by setting smaller analysis chunks in the UI
+- Use a lighter embedding model
+- Process conversations in smaller files
 
 ### Getting Help
 
-1. Check the [FAQ](faq.md)
+1. Check the [FAQ](https://github.com/briefcasebrain/briefxai/discussions)
 2. Search [existing issues](https://github.com/briefcasebrain/briefxai/issues)
-3. Ask in [discussions](https://github.com/briefcasebrain/briefxai/discussions)
-4. Contact support
+3. Open a new issue on GitHub
 
 ## Next Steps
 
 - Read the [Architecture Overview](architecture.md) to understand the system design
-- Check the [API Reference](api.md) for programmatic access
-- See [Configuration Guide](configuration.md) for advanced settings
-- Review [Development Guide](development.md) to contribute
-
-## Quick Reference
-
-### Essential Commands
-
-```bash
-# Start server
-briefxai serve
-
-# Analyze file
-briefxai analyze <file> --template <template>
-
-# Resume session
-briefxai resume <session_id>
-
-# Export results
-briefxai export <session_id> --format <format>
-
-# List sessions
-briefxai list-sessions
-
-# Show help
-briefxai --help
-```
-
-### Configuration Locations
-
-1. `./config.toml` (current directory)
-2. `~/.config/briefxai/config.toml` (user config)
-3. `/etc/briefxai/config.toml` (system-wide)
-4. Environment variables (highest priority)
-
-### File Formats
-
-- **Input**: JSON array of conversations
-- **Output**: JSON, CSV, or HTML reports
-- **Config**: TOML configuration files
-- **Database**: SQLite database files
+- See the [API Reference](api.md) for programmatic access
+- Review [Configuration Guide](configuration.md) for advanced settings
+- Read the [Development Guide](development.md) to contribute

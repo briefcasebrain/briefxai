@@ -1,8 +1,6 @@
 # BriefX Project Structure
 
-This repository contains both Rust and Python implementations of the BriefX conversation analysis platform.
-
-> **Important**: The **Python implementation is the active, maintained version**. The Rust implementation is deprecated and no longer maintained.
+BriefX is a Python web application for privacy-preserving conversation analysis using the [Clio methodology](https://arxiv.org/html/2412.13678v1).
 
 ## Directory Structure
 
@@ -12,67 +10,80 @@ briefxai/
 ├── LICENSE                      # MIT license
 ├── CHANGELOG.md                 # Version history
 ├── CONTRIBUTING.md              # Contribution guidelines
+├── Dockerfile                   # Container build (Python app)
 │
-├── src/                         # Rust implementation (DEPRECATED)
-│   ├── lib.rs                   # Main Rust library
-│   ├── main.rs                  # Rust binary entry point
-│   ├── analysis/                # Analysis modules
-│   ├── clustering.rs            # Clustering algorithms
-│   ├── embeddings.rs            # Embedding generation
-│   ├── facets.rs                # Facet extraction
-│   ├── preprocessing/           # Data preprocessing
-│   ├── web.rs                   # Web server
-│   └── ...                      # Other Rust modules
-│
-├── python/                      # Python implementation (ACTIVE)
-│   ├── README.md                # Python-specific documentation
-│   ├── setup.py                 # Python package setup
-│   ├── requirements.txt         # Python dependencies
-│   ├── app.py                   # Flask web application
+├── python/                      # Python implementation (active)
+│   ├── app.py                   # Flask web application entry point
 │   ├── cli_simple.py            # Command line interface
-│   ├── tests/                   # Python tests
-│   │   └── test_updated.py      # Updated test suite
+│   ├── cli.py                   # Extended CLI
+│   ├── requirements.txt         # Python dependencies
+│   ├── setup.py                 # Python package setup
+│   ├── tests/                   # Test suite
+│   │   └── test_complete.py     # Integration test suite
 │   └── briefx/                  # Python package
-│       ├── __init__.py          # Package initialization
-│       ├── data/                # Data models and parsers
-│       ├── analysis/            # Analysis pipeline
-│       ├── preprocessing/       # Data preprocessing
-│       ├── providers/           # LLM provider integrations
+│       ├── __init__.py
+│       ├── config.py            # Configuration handling
+│       ├── utils.py             # Shared utilities
 │       ├── examples.py          # Example data generation
-│       └── ...                  # Other Python modules
+│       ├── monitoring.py        # System monitoring
+│       ├── error_recovery.py    # Error handling and recovery
+│       ├── analysis/            # Analysis modules
+│       │   ├── clio.py          # Clio methodology implementation
+│       │   ├── clustering.py    # Clustering algorithms (k-means, hierarchical)
+│       │   ├── dimensionality.py # UMAP dimensionality reduction
+│       │   ├── pipeline.py      # Analysis pipeline orchestration
+│       │   └── session_manager.py # Session lifecycle management
+│       ├── data/                # Data models and parsers
+│       │   ├── models.py        # ConversationData, Message, etc.
+│       │   └── parsers.py       # JSON, CSV, text parsers
+│       ├── preprocessing/       # Data preprocessing pipeline
+│       │   └── ...              # Validation, PII detection, language detection
+│       ├── providers/           # LLM provider integrations
+│       │   ├── base.py          # BaseProvider interface
+│       │   ├── factory.py       # Provider factory and auto-detection
+│       │   ├── openai.py        # OpenAI provider
+│       │   ├── anthropic.py     # Anthropic provider
+│       │   ├── gemini.py        # Google Gemini provider
+│       │   ├── ollama.py        # Ollama (local) provider
+│       │   └── huggingface.py   # HuggingFace provider
+│       ├── persistence/         # Database and session storage
+│       │   └── ...              # SQLite and PostgreSQL backends
+│       └── prompts/             # LLM prompt templates
+│
+├── briefxai_ui_data/            # Frontend static assets
+│   ├── index.html               # Main SPA entry point
+│   ├── static/                  # CSS, JavaScript
+│   └── ...                      # Other UI assets
 │
 ├── docs/                        # Documentation
-│   ├── api.md                   # API documentation
+│   ├── quickstart.md            # 5-minute quick start guide
+│   ├── getting-started.md       # Full getting started guide
+│   ├── api.md                   # REST and WebSocket API reference
+│   ├── architecture.md          # System architecture overview
 │   ├── configuration.md         # Configuration guide
-│   ├── getting-started.md       # Getting started guide
-│   └── ...                      # Other documentation
+│   ├── development.md           # Development workflow guide
+│   ├── deployment.md            # Cloud deployment guide (GCP, AWS, Vercel)
+│   └── advanced-features.md     # Advanced usage and features
 │
-├── tests/                       # Rust tests
-│   ├── common/                  # Common test utilities
-│   └── ...                      # Test files
+├── migrations/                  # Database migration scripts
+├── scripts/                     # Build and utility scripts
 │
-├── scripts/                     # Build and deployment scripts
-├── deployment/                  # Deployment configurations
-├── assets/                      # Web UI assets
-├── templates/                   # HTML templates
-└── target/                      # Rust build artifacts
+└── src/                         # Rust implementation (deprecated, unmaintained)
 ```
 
-## Implementation Status
+## Key Files
 
-| Feature | Rust (Deprecated) | Python (Active) |
-|---------|-------------------|-----------------|
-| Status | ⚠️ **Deprecated** | ✅ **Active** |
-| Maintenance | None | Full support |
-| Performance | High (5000+ conversations/min) | Good (1000+ conversations/min) |
-| Memory Usage | Low (~128MB for 10k conversations) | Moderate (~512MB for 10k conversations) |
-| Development Speed | Moderate | Fast |
-| Deployment | Single binary | Python runtime |
-| Dependencies | Minimal | Standard Python ecosystem |
+| File | Purpose |
+|------|---------|
+| `python/app.py` | Flask application — add API endpoints here |
+| `python/briefx/analysis/clio.py` | Core Clio analysis engine |
+| `python/briefx/analysis/pipeline.py` | Pipeline orchestration |
+| `python/briefx/providers/factory.py` | Add/register new LLM providers here |
+| `python/briefx/data/models.py` | Core data models (ConversationData, Message) |
+| `briefxai_ui_data/index.html` | Frontend entry point |
 
 ## Getting Started
 
-### Python Implementation (Recommended)
 ```bash
 cd python/
 pip install -r requirements.txt
@@ -80,18 +91,4 @@ export OPENAI_API_KEY="your-key"
 python app.py
 ```
 
-### Command Line Usage
-```bash
-cd python/
-python cli_simple.py --help
-python cli_simple.py generate --count 5
-python cli_simple.py test
-```
-
-### Testing
-```bash
-cd python/
-python tests/test_updated.py
-```
-
-The Python implementation provides all core functionality with active maintenance and support.
+See [docs/quickstart.md](docs/quickstart.md) for a full walkthrough.
