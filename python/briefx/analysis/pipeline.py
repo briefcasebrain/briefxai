@@ -5,6 +5,8 @@ import logging
 import time
 from typing import List, Dict, Any, Optional
 
+import briefcase_ai
+
 from ..data.models import ConversationData, AnalysisResults, ConversationAnalysis
 from ..providers.base import LLMProvider, EmbeddingProvider
 from ..providers.factory import ProviderFactory
@@ -13,20 +15,21 @@ from .clustering import ConversationClusterer
 from .dimensionality import reduce_embeddings_for_clustering, reduce_embeddings_for_visualization
 from .session_manager import session_manager
 from ..prompts import AdvancedPromptManager
-from config import BriefXConfig, LlmProvider, EmbeddingProvider as EmbeddingProviderEnum
+from ..config import BriefXConfig, LlmProvider, EmbeddingProvider as EmbeddingProviderEnum, get_default_config
 
 logger = logging.getLogger(__name__)
 
 class AnalysisPipeline:
     """Main analysis pipeline for processing conversations"""
-    
+
     def __init__(self, config: BriefXConfig):
         self.config = config
         self.llm_provider: Optional[LLMProvider] = None
         self.embedding_provider: Optional[EmbeddingProvider] = None
         self.clusterer = ConversationClusterer(method="auto", max_clusters=10, llm_provider=None)  # Will be updated after initialization
         self.prompt_manager = AdvancedPromptManager()
-        
+        self._decision_backend = briefcase_ai.SqliteBackend.in_memory()
+
         self._initialize_providers()
     
     def _initialize_providers(self):
@@ -250,13 +253,22 @@ class AnalysisPipeline:
                     start_time = time.time()
                     facets = await self.llm_provider.extract_facets([conv])
                     execution_time = time.time() - start_time
-                    
+
                     # Record performance metrics
                     self.prompt_manager.record_result(
                         "facet_extraction",
                         prompt.version,
                         execution_time,
                         success=len(facets) > 0
+                    )
+
+                    # Record AI decision for audit/replay via briefcase_ai
+                    self._record_decision(
+                        function_name="extract_facets",
+                        input_text=conv.get_text(),
+                        output_value=[f.type for f in facets[0]] if facets else [],
+                        execution_time_ms=int(execution_time * 1000),
+                        session_id=session_id,
                     )
                     
                     all_facets.extend(facets)
@@ -361,12 +373,44 @@ class AnalysisPipeline:
         session_manager.update_progress(session_id, progress, message)
         logger.debug(f"Progress {progress:.1f}%: {message}")
 
+    def _record_decision(
+        self,
+        function_name: str,
+        input_text: str,
+        output_value: Any,
+        execution_time_ms: int,
+        session_id: str,
+    ) -> None:
+        """Record an AI decision snapshot via briefcase_ai for audit and replay."""
+        try:
+            snapshot = briefcase_ai.DecisionSnapshot(function_name)
+            snapshot.add_input(briefcase_ai.Input("text", input_text[:500], "text"))
+            snapshot.add_output(briefcase_ai.Output("result", str(output_value)[:500], "text"))
+            snapshot.with_execution_time(execution_time_ms)
+            snapshot.with_module("briefx.analysis.pipeline")
+            snapshot.add_tag("session_id", session_id)
+            if self.llm_provider and hasattr(self.llm_provider, 'model'):
+                params = (
+                    briefcase_ai.ModelParameters(self.llm_provider.model)
+                    .with_provider(type(self.llm_provider).__name__)
+                )
+                snapshot.with_model_parameters(params)
+            self._decision_backend.save_decision(snapshot)
+        except Exception as e:
+            logger.debug(f"Decision recording skipped: {e}")
+
 # Global pipeline instance (will be initialized with config)
 pipeline: Optional[AnalysisPipeline] = None
 
-def initialize_pipeline(config: BriefXConfig):
-    """Initialize the global pipeline instance"""
+def initialize_pipeline(config: BriefXConfig = None):
+    """Initialize the global pipeline instance.
+
+    If no config is provided, uses default configuration based on
+    available environment variables.
+    """
     global pipeline
+    if config is None:
+        config = get_default_config()
     pipeline = AnalysisPipeline(config)
 
 def get_pipeline() -> AnalysisPipeline:

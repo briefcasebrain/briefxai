@@ -8,7 +8,7 @@
 
 body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    background: linear-gradient(172deg, #0d0d12 0%, #03152f 100%);
     min-height: 100vh;
     color: #1a1a1a;
 }
@@ -178,7 +178,7 @@ body {
 
 .upload-zone:hover,
 .upload-zone.dragover {
-    border-color: #6366f1;
+    border-color: #3388ff;
     background: #f0f4ff;
     transform: translateY(-2px);
 }
@@ -220,7 +220,7 @@ body {
 
 .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    background: linear-gradient(90deg, #3388ff, #8b5cf6);
     border-radius: 4px;
     transition: width 0.3s ease;
     position: relative;
@@ -308,7 +308,7 @@ body {
 .stat-value {
     font-size: 1.5rem;
     font-weight: bold;
-    color: #6366f1;
+    color: #3388ff;
 }
 
 /* API Integration */
@@ -334,9 +334,9 @@ body {
 }
 
 .integration-card:hover {
-    border-color: #6366f1;
+    border-color: #3388ff;
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.15);
+    box-shadow: 0 8px 25px rgba(51,136,255, 0.15);
 }
 
 .integration-icon {
@@ -433,7 +433,7 @@ body {
 .metric-value {
     font-size: 2rem;
     font-weight: bold;
-    color: #6366f1;
+    color: #3388ff;
     margin-bottom: 0.25rem;
 }
 
@@ -481,7 +481,7 @@ body {
 }
 
 .topic-count {
-    background: #6366f1;
+    background: #3388ff;
     color: white;
     padding: 0.25rem 0.5rem;
     border-radius: 12px;
@@ -537,7 +537,7 @@ body {
     min-width: 40px;
     text-align: center;
     font-weight: bold;
-    color: #6366f1;
+    color: #3388ff;
 }
 
 .stage-bar {
@@ -550,7 +550,7 @@ body {
 
 .stage-fill {
     height: 100%;
-    background: linear-gradient(90deg, #6366f1, #8b5cf6);
+    background: linear-gradient(90deg, #3388ff, #8b5cf6);
     border-radius: 4px;
     transition: width 0.3s ease;
 }
@@ -691,7 +691,7 @@ body {
     width: 60px;
     height: 60px;
     border: 4px solid #e5e7eb;
-    border-top: 4px solid #6366f1;
+    border-top: 4px solid #3388ff;
     border-radius: 50%;
     animation: spin 1s linear infinite;
     margin: 0 auto 2rem;
@@ -738,14 +738,14 @@ body {
 }
 
 .btn-primary {
-    background: #6366f1;
+    background: #3388ff;
     color: white;
 }
 
 .btn-primary:hover {
     background: #5856eb;
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    box-shadow: 0 4px 12px rgba(51,136,255, 0.3);
 }
 
 .btn-secondary {
@@ -800,7 +800,7 @@ body {
     border-radius: 8px;
     padding: 1rem 1.5rem;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    border-left: 4px solid #6366f1;
+    border-left: 4px solid #3388ff;
     animation: slideInLeft 0.3s ease;
     position: relative;
 }

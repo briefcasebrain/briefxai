@@ -9,7 +9,11 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 
-import tiktoken
+try:
+    import tiktoken
+    HAS_TIKTOKEN = True
+except ImportError:
+    HAS_TIKTOKEN = False
 
 from ..data.models import ConversationData
 from .validators import CompositeValidator, ValidationResult
@@ -92,11 +96,18 @@ class SmartPreprocessor:
         self.language_detector = LanguageDetector()
         
         # Initialize tokenizer
-        try:
-            self.tokenizer = tiktoken.get_encoding(tokenizer_model)
-        except:
-            logger.warning(f"Failed to load tokenizer {tokenizer_model}, using default")
-            self.tokenizer = tiktoken.get_encoding("cl100k_base")
+        self.tokenizer = None
+        if HAS_TIKTOKEN:
+            try:
+                self.tokenizer = tiktoken.get_encoding(tokenizer_model)
+            except Exception:
+                logger.warning(f"Failed to load tokenizer {tokenizer_model}, using default")
+                try:
+                    self.tokenizer = tiktoken.get_encoding("cl100k_base")
+                except Exception:
+                    logger.warning("tiktoken encoding not available, using simple token counting")
+        else:
+            logger.info("tiktoken not installed, using simple token counting")
     
     def analyze_data_quality(self, conversations: List[ConversationData]) -> DataQualityReport:
         """Analyze data quality and generate report"""
@@ -368,9 +379,11 @@ class SmartPreprocessor:
     
     def _count_tokens(self, conversation: ConversationData) -> int:
         """Count tokens in conversation"""
-        
         text = " ".join([msg.content for msg in conversation.messages])
-        return len(self.tokenizer.encode(text))
+        if self.tokenizer is not None:
+            return len(self.tokenizer.encode(text))
+        # Fallback: approximate token count by splitting on whitespace
+        return len(text.split())
     
     def _remove_duplicates(self, conversations: List[ConversationData]) -> List[ConversationData]:
         """Remove duplicate conversations"""

@@ -7,11 +7,11 @@ import json
 import sys
 from pathlib import Path
 
-# Add current directory to path
-sys.path.insert(0, str(Path(__file__).parent))
+# Add parent directory to path
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app import app
-from src.examples import generate_example_conversations
+from briefx.examples import generate_example_conversations
 
 def test_api_endpoints():
     """Test key API endpoints"""
@@ -57,13 +57,11 @@ def test_api_endpoints():
     quality = data['data']['quality_report']['overall_quality_score']
     print(f"✓ Preprocessing: quality score {quality:.2%}")
     
-    # Test 5: Status endpoint (expect 404 for non-existent session)
-    response = client.get('/api/status/test-session')
+    # Test 5: Session status endpoint (non-existent session returns not_found)
+    response = client.get('/api/session/test-session/status')
+    assert response.status_code == 200
     data = json.loads(response.data)
-    if response.status_code == 404:
-        print(f"✓ Status check: not_found (expected)")
-    else:
-        print(f"✓ Status check: {data['status']}")
+    print(f"✓ Status check: {data['status']}")
     
     # Test 6: Example data endpoint
     response = client.get('/api/example')
@@ -83,8 +81,8 @@ def test_api_endpoints():
     response = client.get('/api/providers')
     assert response.status_code == 200
     data = json.loads(response.data)
-    assert 'available_providers' in data
-    print(f"✓ Providers: {len(data['available_providers']['llm'])} LLM, {len(data['available_providers']['embedding'])} embedding")
+    assert 'providers' in data
+    print(f"✓ Providers: {len(data['providers'])} available")
     
     print("\n" + "=" * 50)
     print("🎉 All API tests passed!")

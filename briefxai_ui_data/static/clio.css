@@ -1,21 +1,40 @@
 /* Clio Visualization Styles */
 
 :root {
-    --primary: #6366f1;
-    --primary-dark: #4f46e5;
-    --secondary: #ec4899;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --danger: #ef4444;
-    --neutral: #6b7280;
+    /* BriefcaseBrain design tokens */
+    --primary: #3388ff;
+    --primary-dark: #4151da;
+    --primary-light: #ebf4ff;
+    --primary-muted: rgba(51,136,255,0.12);
+    --secondary: #0d0d12;
+    --success: #00811a;
+    --success-light: #ecfaec;
+    --warning: #c47100;
+    --warning-light: #fff9ed;
+    --danger: #eb6131;
+    --danger-light: #fff5f5;
+    --neutral: #a0a0a8;
+    --navy: #0d0d12;
+    --navy-light: #2c2c2e;
     --bg-primary: #ffffff;
-    --bg-secondary: #f9fafb;
-    --bg-tertiary: #f3f4f6;
-    --text-primary: #111827;
-    --text-secondary: #6b7280;
-    --border: #e5e7eb;
-    --shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    --shadow-lg: 0 10px 25px rgba(0, 0, 0, 0.1);
+    --bg-secondary: #f7f7f7;
+    --bg-tertiary: #f7f7f7;
+    --text-primary: #0d0d12;
+    --text-secondary: #55555e;
+    --text-muted: #a0a0a8;
+    --border: #eeeff2;
+    --border-medium: #e3e3e8;
+    --shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    --shadow-md: 0 4px 16px rgba(74, 127, 255, 0.3);
+    --shadow-lg: 0 8px 28px rgba(74, 127, 255, 0.4);
+    --shadow-xl: 0 24px 80px rgba(0, 0, 0, 0.1), 0 4px 16px rgba(0, 0, 0, 0.05);
+    --gradient-primary: linear-gradient(172deg, #3388ff 0%, #4151da 100%);
+    --radius-sm: 6px;
+    --radius: 8px;
+    --radius-md: 10px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-full: 9999px;
 }
 
 * {
@@ -384,7 +403,7 @@ body {
 .mini-map-viewport {
     position: absolute;
     border: 2px solid var(--primary);
-    background: rgba(99, 102, 241, 0.1);
+    background: rgba(51, 136, 255, 0.1);
     pointer-events: none;
 }
 

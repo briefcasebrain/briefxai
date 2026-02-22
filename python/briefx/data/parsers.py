@@ -34,14 +34,15 @@ def parse_csv_conversations(content: Union[str, bytes]) -> List[ConversationData
     """Parse CSV conversation data"""
     if isinstance(content, bytes):
         content = content.decode('utf-8')
-    
+
     conversations = []
     current_conversation = []
-    current_id = None
-    
+    # Use a mutable dict so _process_csv_row can update current_id
+    state = {'current_id': None}
+
     # Try to detect CSV format
     reader = csv.reader(StringIO(content))
-    
+
     try:
         # Skip header if it exists
         first_row = next(reader)
@@ -50,21 +51,21 @@ def parse_csv_conversations(content: Union[str, bytes]) -> List[ConversationData
             pass
         else:
             # First row is data, process it
-            _process_csv_row(first_row, current_conversation, current_id, conversations)
-        
+            _process_csv_row(first_row, current_conversation, state, conversations)
+
         for row in reader:
-            _process_csv_row(row, current_conversation, current_id, conversations)
-            
+            _process_csv_row(row, current_conversation, state, conversations)
+
     except Exception as e:
         raise ValueError(f"Error parsing CSV: {e}")
-    
+
     # Add the last conversation
     if current_conversation:
         conversations.append(ConversationData(
             messages=current_conversation,
             metadata={}
         ))
-    
+
     return conversations
 
 def parse_text_conversations(content: Union[str, bytes]) -> List[ConversationData]:
@@ -136,26 +137,30 @@ def _is_data_row(row: List[str]) -> bool:
     headers = ['id', 'role', 'content', 'message', 'text', 'conversation_id']
     return not any(cell.lower().strip() in headers for cell in row[:3])
 
-def _process_csv_row(row: List[str], current_conversation: List[Message], 
-                    current_id: str, conversations: List[ConversationData]):
-    """Process a single CSV row"""
+def _process_csv_row(row: List[str], current_conversation: List[Message],
+                    state: Dict[str, Any], conversations: List[ConversationData]):
+    """Process a single CSV row.
+
+    Args:
+        state: mutable dict with 'current_id' key to track conversation boundaries.
+    """
     if len(row) < 3:
         return
-    
+
     conv_id = row[0].strip()
     role = row[1].strip().lower()
     content = ','.join(row[2:]).strip().strip('"')
-    
+
     # Check if starting a new conversation
-    if current_id is not None and conv_id != current_id:
+    if state['current_id'] is not None and conv_id != state['current_id']:
         if current_conversation:
             conversations.append(ConversationData(
                 messages=current_conversation.copy(),
                 metadata={}
             ))
             current_conversation.clear()
-    
-    current_id = conv_id
+
+    state['current_id'] = conv_id
     if content:
         current_conversation.append(Message(
             role="user" if role in ["user", "human", "question"] else "assistant",

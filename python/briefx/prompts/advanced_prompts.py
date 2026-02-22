@@ -588,6 +588,81 @@ class AdvancedPromptManager:
         
         return optimized
     
+    def get_prompt(
+        self,
+        prompt_type_str: str,
+        conversation: str = "",
+        metadata: Optional[Dict[str, Any]] = None,
+        **kwargs
+    ) -> PromptTemplate:
+        """Get a prompt template by type string.
+
+        This is a convenience method used by the pipeline for facet extraction.
+        Returns the template object (which has a .version attribute).
+        """
+        try:
+            prompt_type = PromptType(prompt_type_str)
+        except ValueError:
+            # Try matching by name
+            prompt_type = None
+            for pt in PromptType:
+                if pt.name.lower() == prompt_type_str.lower():
+                    prompt_type = pt
+                    break
+            if prompt_type is None:
+                prompt_type = PromptType.FACET_EXTRACTION
+
+        template = self.get_template(prompt_type)
+        if template is None:
+            # Return the first available template
+            template = next(iter(self.templates.values()), None)
+        return template
+
+    def record_result(
+        self,
+        prompt_type_str: str,
+        version: PromptVersion,
+        execution_time: float,
+        success: bool = True,
+        **kwargs
+    ) -> None:
+        """Record the result of a prompt execution.
+
+        Convenience wrapper around track_execution used by the pipeline.
+        """
+        try:
+            prompt_type = PromptType(prompt_type_str)
+        except ValueError:
+            prompt_type = PromptType.FACET_EXTRACTION
+
+        template = self.get_template(prompt_type, version)
+        if template is None:
+            template = self.get_template(prompt_type)
+        if template is None:
+            return
+
+        self.track_execution(
+            template=template,
+            input_data={},
+            generated_prompt="",
+            execution_time_ms=int(execution_time * 1000),
+            success=success
+        )
+
+    def optimize_templates(self, prompt_type_str: str) -> None:
+        """Optimize all templates of a given type.
+
+        Convenience wrapper around optimize_template used by the pipeline.
+        """
+        try:
+            prompt_type = PromptType(prompt_type_str)
+        except ValueError:
+            return
+
+        for template_id, template in list(self.templates.items()):
+            if template.type == prompt_type:
+                self.optimize_template(template_id)
+
     def get_metrics_summary(self) -> Dict[str, Any]:
         """Get summary of prompt metrics"""
         summary = {

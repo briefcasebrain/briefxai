@@ -33,7 +33,11 @@ class EmbeddingProvider(ABC):
     async def generate_embeddings(self, texts: List[str]) -> List[List[float]]:
         """Generate embeddings for texts"""
         pass
-    
+
+    async def embed_texts(self, texts: List[str]) -> List[List[float]]:
+        """Alias for generate_embeddings(), used by clio.py."""
+        return await self.generate_embeddings(texts)
+
     @abstractmethod
     def get_embedding_dimension(self) -> int:
         """Get the dimension of embeddings produced by this model"""

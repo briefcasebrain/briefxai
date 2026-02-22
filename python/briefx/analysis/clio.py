@@ -23,6 +23,8 @@ from sklearn.cluster import DBSCAN, AgglomerativeClustering
 from sklearn.metrics import silhouette_score, calinski_harabasz_score
 from sklearn.feature_extraction.text import TfidfVectorizer
 
+import briefcase_ai
+
 from ..data.models import ConversationData
 from ..providers.base import LLMProvider, EmbeddingProvider
 from .session_manager import SessionManager
@@ -142,62 +144,42 @@ class ClioAnalysisRequest:
     summarization_level: SummarizationLevel = SummarizationLevel.MODERATE
 
 class PIIDetector:
-    """Privacy-preserving PII detection and redaction"""
-    
+    """Privacy-preserving PII detection and redaction backed by briefcase_ai.Sanitizer"""
+
+    # Map briefcase_ai singular type names → plural keys used throughout the codebase
+    _TYPE_MAP = {'email': 'emails', 'phone': 'phones', 'ssn': 'ssns', 'credit_card': 'credit_cards'}
+    # Map briefcase_ai redaction placeholders → legacy bracket format
+    _PLACEHOLDER_MAP = {
+        '[REDACTED_EMAIL]': '[EMAIL]',
+        '[REDACTED_PHONE]': '[PHONE]',
+        '[REDACTED_SSN]': '[SSN]',
+        '[REDACTED_CREDIT_CARD]': '[CREDIT_CARD]',
+    }
+
     def __init__(self):
-        self.email_pattern = re.compile(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b')
-        self.phone_pattern = re.compile(r'\b(?:\+?1[-.]?)?\(?([0-9]{3})\)?[-.]?([0-9]{3})[-.]?([0-9]{4})\b')
-        self.ssn_pattern = re.compile(r'\b\d{3}-\d{2}-\d{4}\b')
-        self.credit_card_pattern = re.compile(r'\b\d{4}[-\s]?\d{4}[-\s]?\d{4}[-\s]?\d{4}\b')
-        self.name_indicators = ['my name is', 'i am', 'i\'m', 'call me']
-    
+        self._sanitizer = briefcase_ai.Sanitizer()
+
     def detect_pii(self, text: str) -> Dict[str, List[str]]:
         """Detect various types of PII in text"""
-        pii_found = {
-            'emails': self.email_pattern.findall(text),
-            'phones': self.phone_pattern.findall(text),
-            'ssns': self.ssn_pattern.findall(text),
-            'credit_cards': self.credit_card_pattern.findall(text),
-            'potential_names': []
-        }
-        
-        # Simple name detection based on context
-        text_lower = text.lower()
-        for indicator in self.name_indicators:
-            if indicator in text_lower:
-                start = text_lower.find(indicator) + len(indicator)
-                potential_name = text[start:start+50].strip().split()[0:2]
-                if potential_name:
-                    pii_found['potential_names'].extend(potential_name)
-        
-        return pii_found
-    
+        analysis = self._sanitizer.analyze_pii(text)
+        detected: Dict[str, List[str]] = {}
+        for pii_type in analysis.get('detected_types', []):
+            key = self._TYPE_MAP.get(pii_type, pii_type + 's')
+            detected.setdefault(key, ['[detected]'])
+        return detected
+
     def redact_pii(self, text: str) -> Tuple[str, Dict[str, int]]:
-        """Redact PII from text and return redaction count"""
-        redacted_text = text
-        redaction_count = {}
-        
-        # Redact emails
-        emails = self.email_pattern.findall(redacted_text)
-        redaction_count['emails'] = len(emails)
-        redacted_text = self.email_pattern.sub('[EMAIL]', redacted_text)
-        
-        # Redact phones
-        phones = self.phone_pattern.findall(redacted_text)
-        redaction_count['phones'] = len(phones)
-        redacted_text = self.phone_pattern.sub('[PHONE]', redacted_text)
-        
-        # Redact SSNs
-        ssns = self.ssn_pattern.findall(redacted_text)
-        redaction_count['ssns'] = len(ssns)
-        redacted_text = self.ssn_pattern.sub('[SSN]', redacted_text)
-        
-        # Redact credit cards
-        cards = self.credit_card_pattern.findall(redacted_text)
-        redaction_count['credit_cards'] = len(cards)
-        redacted_text = self.credit_card_pattern.sub('[CREDIT_CARD]', redacted_text)
-        
-        return redacted_text, redaction_count
+        """Redact PII from text and return per-type redaction counts"""
+        result = self._sanitizer.sanitize(text)
+        sanitized = result.sanitized
+        for src, dst in self._PLACEHOLDER_MAP.items():
+            sanitized = sanitized.replace(src, dst)
+        redaction_count: Dict[str, int] = {}
+        for redaction in result.redactions:
+            pii_type = getattr(redaction, 'pii_type', 'unknown')
+            key = self._TYPE_MAP.get(pii_type, pii_type + 's')
+            redaction_count[key] = redaction_count.get(key, 0) + 1
+        return sanitized, redaction_count
 
 class ClioHierarchyBuilder:
     """Build hierarchical cluster structure"""
@@ -892,11 +874,21 @@ Respond with just the cluster name, no explanation."""
             return []
     
     def _calculate_cost(self, conversations: List[ClioConversation], patterns: List[ClioPattern]) -> float:
-        """Calculate estimated analysis cost"""
-        # Simple cost estimation based on token usage
-        total_tokens = sum(len(conv.content.split()) for conv in conversations)
-        pattern_tokens = sum(len(pattern.description.split()) for pattern in patterns)
-        
-        # Rough estimation: $0.01 per 1000 tokens
-        estimated_cost = (total_tokens + pattern_tokens) * 0.01 / 1000
-        return round(estimated_cost, 4)
+        """Calculate estimated analysis cost using briefcase_ai.CostCalculator"""
+        cost_calc = briefcase_ai.CostCalculator()
+        combined_text = ' '.join(conv.content for conv in conversations)
+        pattern_text = ' '.join(pattern.description for pattern in patterns)
+        full_input = combined_text + ' ' + pattern_text
+        estimated_output_tokens = max(1, len(patterns) * 50)
+        estimate = cost_calc.estimate_cost_from_text(
+            self._model_name_for_cost(),
+            full_input,
+            estimated_output_tokens,
+        )
+        return round(estimate.total_cost, 4)
+
+    def _model_name_for_cost(self) -> str:
+        """Return the model name to use for cost estimation"""
+        if self.llm_provider and hasattr(self.llm_provider, 'model'):
+            return self.llm_provider.model
+        return 'gpt-4o-mini'

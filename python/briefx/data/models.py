@@ -21,6 +21,11 @@ class ConversationData:
     def __len__(self) -> int:
         return len(self.messages)
     
+    @property
+    def content(self) -> str:
+        """Alias for get_text(), used by clio.py."""
+        return self.get_text()
+
     def get_text(self) -> str:
         """Get combined text from all messages"""
         return " ".join(msg.content for msg in self.messages)

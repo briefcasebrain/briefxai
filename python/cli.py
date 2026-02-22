@@ -17,6 +17,7 @@ from rich.logging import RichHandler
 from rich.panel import Panel
 
 # Import our modules
+from briefx.config import BriefXConfig
 from briefx.data.parsers import parse_json_conversations
 from briefx.examples import generate_example_conversations
 
