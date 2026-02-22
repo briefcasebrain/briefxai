@@ -1,99 +1,120 @@
-# Contributing to BriefXAI
+# Contributing to BriefX
 
-Thank you for your interest in contributing to BriefXAI! This document provides comprehensive guidelines for contributing to the project.
+Thank you for your interest in contributing to BriefX! This document provides guidelines for contributing to the project.
 
 ## Getting Started
 
 ### Prerequisites
 
-- Rust 1.70+ (`rustc --version`)
-- SQLite 3.35+ (`sqlite3 --version`)
-- Git 2.0+ (`git --version`)
-- Node.js 16+ (optional, for UI development)
+- Python 3.9+
+- Git 2.0+
+- An API key from OpenAI, Anthropic, or Google Gemini (optional for local Ollama)
 
 ### Development Setup
 
 1. **Fork and clone the repository:**
    ```bash
    git clone https://github.com/YOUR-USERNAME/briefxai.git
-   cd briefxai
+   cd briefxai/python
    ```
 
-2. **Set up environment variables:**
+2. **Create a virtual environment:**
    ```bash
-   cp .env.example .env
-   # Edit .env with your API keys (OpenAI, Gemini, etc.)
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
-3. **Build the project:**
+3. **Install dependencies:**
    ```bash
-   cargo build
-   cargo test
+   pip install -r requirements.txt
    ```
 
-4. **Run in development mode:**
+4. **Set up environment variables:**
    ```bash
-   RUST_LOG=debug cargo run -- ui
+   export OPENAI_API_KEY="your-api-key"
+   # or
+   export ANTHROPIC_API_KEY="your-api-key"
+   ```
+
+5. **Run the development server:**
+   ```bash
+   python app.py
    ```
 
 ## Code Style Guidelines
 
-### Rust Code
+### Python Code
 
-- Follow standard Rust formatting with `rustfmt`
-- Use `clippy` for linting
+- Follow [PEP 8](https://peps.python.org/pep-0008/) style conventions
+- Use `black` for code formatting
+- Use `flake8` for linting
 - Write descriptive variable and function names
-- Add documentation comments for public APIs
-- Keep functions focused and small
+- Add docstrings for public functions and classes
 
 ```bash
 # Format code
-cargo fmt
+black briefx/
 
-# Run clippy
-cargo clippy -- -D warnings
+# Run linter
+flake8 briefx/
 ```
-
-### JavaScript/TypeScript
-
-- Use ES6+ features
-- Follow consistent indentation (2 spaces)
-- Use meaningful component names
-- Add JSDoc comments for complex functions
 
 ### Documentation
 
-- Update README.md for new features
-- Add inline documentation for complex logic
+- Update the relevant docs in `docs/` for new features
 - Include examples in documentation
-- Keep documentation up-to-date with code changes
+- Keep documentation in sync with code changes
 
-## 🧪 Testing Requirements
+## Testing Requirements
 
 ### Running Tests
 
 ```bash
+# From the python/ directory
+
 # Run all tests
-cargo test
+python -m pytest tests/
 
-# Run specific test
-cargo test test_name
+# Run with verbose output
+python -m pytest tests/ -v
 
-# Run with output
-cargo test -- --nocapture
+# Run a specific test file
+python -m pytest tests/test_complete.py
 
-# Run integration tests
-cargo test --test '*'
+# Run with coverage
+python -m pytest tests/ --cov=briefx
 ```
 
 ### Writing Tests
 
-- Write unit tests for new functions
-- Add integration tests for new features
+- Write unit tests for new functions and classes
+- Add integration tests for new API endpoints or analysis features
 - Test edge cases and error conditions
-- Mock external API calls in tests
+- Use pytest fixtures for shared setup
 
-## 🔄 Pull Request Process
+```python
+# tests/test_example.py
+import pytest
+from briefx.data.models import ConversationData, Message
+
+def test_conversation_creation():
+    conv = ConversationData(messages=[
+        Message(role="user", content="Hello"),
+        Message(role="assistant", content="Hi there"),
+    ])
+    assert len(conv.messages) == 2
+
+@pytest.fixture
+def sample_conversations():
+    return [
+        ConversationData(messages=[
+            Message(role="user", content="I need help"),
+            Message(role="assistant", content="I can help with that"),
+        ])
+    ]
+```
+
+## Pull Request Process
 
 ### Before Submitting
 
@@ -110,10 +131,9 @@ cargo test --test '*'
 
 3. **Verify your changes:**
    ```bash
-   cargo fmt
-   cargo clippy -- -D warnings
-   cargo test
-   cargo build --release
+   black briefx/
+   flake8 briefx/
+   python -m pytest tests/
    ```
 
 ### Submitting a PR
@@ -121,7 +141,7 @@ cargo test --test '*'
 1. **Commit with descriptive messages:**
    ```bash
    git commit -m "feat: add new analysis feature
-   
+
    - Implement feature X
    - Add tests for feature X
    - Update documentation"
@@ -137,20 +157,23 @@ cargo test --test '*'
 
 ```
 briefxai/
-├── src/
-│   ├── lib.rs           # Main library entry
-│   ├── main.rs          # CLI entry point
-│   ├── web.rs           # Web server
-│   ├── analysis/        # Analysis modules
-│   ├── llm/             # LLM providers
-│   └── clio_core.rs     # Clio methodology
-├── tests/               # Integration tests
-├── openclio_ui_data/    # Clio UI files
-├── briefxai_ui_data/    # Main UI files
-└── docs/                # Documentation
+├── python/                  # Active Python implementation
+│   ├── app.py               # Flask web application
+│   ├── cli_simple.py        # Command line interface
+│   ├── requirements.txt     # Python dependencies
+│   ├── tests/               # Test suite
+│   └── briefx/              # Python package
+│       ├── analysis/        # Analysis pipeline (Clio, clustering, etc.)
+│       ├── data/            # Data models and parsers
+│       ├── preprocessing/   # Data preprocessing
+│       ├── providers/       # LLM provider integrations
+│       ├── persistence/     # Database and session storage
+│       └── prompts/         # LLM prompt templates
+├── briefxai_ui_data/        # Frontend static assets
+└── docs/                    # Documentation
 ```
 
-## 🐛 Reporting Issues
+## Reporting Issues
 
 ### Bug Reports
 
@@ -158,7 +181,7 @@ Include:
 - Clear description of the bug
 - Steps to reproduce
 - Expected vs actual behavior
-- System information (OS, Rust version)
+- System information (OS, Python version)
 - Error messages and logs
 
 ### Feature Requests
@@ -170,41 +193,37 @@ Include:
 
 ## Development Tips
 
-### Performance
+### Adding a New LLM Provider
 
-- Use async/await for I/O operations
-- Batch API calls when possible
-- Implement proper caching strategies
-- Profile before optimizing
+1. Create a new file in `python/briefx/providers/` (e.g., `myprovider.py`)
+2. Extend the `BaseProvider` class from `providers/base.py`
+3. Implement the required methods (`complete`, `embed`)
+4. Register the provider in `providers/factory.py`
+
+### Adding a New Analysis Feature
+
+1. Add feature logic to the appropriate module under `python/briefx/analysis/`
+2. Wire it into the pipeline in `pipeline.py`
+3. Add a corresponding API endpoint in `app.py`
+4. Write tests in `python/tests/`
 
 ### Security
 
 - Never commit API keys or secrets
-- Validate all user input
-- Follow OWASP guidelines
-- Implement rate limiting
+- Validate all user input at API boundaries
+- Follow OWASP guidelines for web application security
+- Implement rate limiting for public endpoints
 
-### Privacy
+## Resources
 
-- Follow Clio methodology principles
-- Implement PII detection/masking
-- Use local processing when possible
-- Document data handling
-
-## 📚 Resources
-
-- [Rust Book](https://doc.rust-lang.org/book/)
-- [Tokio Documentation](https://tokio.rs/tokio/tutorial)
-- [Axum Framework](https://github.com/tokio-rs/axum)
+- [Flask Documentation](https://flask.palletsprojects.com/)
+- [pytest Documentation](https://docs.pytest.org/)
 - [Clio Paper](https://arxiv.org/html/2412.13678v1)
+- [scikit-learn Documentation](https://scikit-learn.org/)
 
 ## License
 
-By contributing to BriefXAI, you agree that your contributions will be licensed under the MIT License.
-
-## 🙏 Thank You!
-
-Your contributions make BriefXAI better for everyone. We appreciate your time and effort!
+By contributing to BriefX, you agree that your contributions will be licensed under the MIT License.
 
 ---
 

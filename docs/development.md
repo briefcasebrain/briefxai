@@ -1,13 +1,12 @@
 # Development Guide
 
-This guide covers the development workflow, testing strategies, and best practices for contributing to BriefXAI.
+This guide covers the development workflow, testing strategies, and best practices for contributing to BriefX.
 
 ## Development Environment Setup
 
 ### Prerequisites
 
-- Rust 1.70+ (install via [rustup](https://rustup.rs/))
-- SQLite 3.35+
+- Python 3.9+
 - Git
 - Optional: Docker for containerized development
 
@@ -16,46 +15,71 @@ This guide covers the development workflow, testing strategies, and best practic
 1. **Clone the repository:**
    ```bash
    git clone https://github.com/briefcasebrain/briefxai.git
-   cd briefxai
+   cd briefxai/python
    ```
 
-2. **Install Rust toolchain:**
+2. **Create a virtual environment:**
    ```bash
-   rustup update stable
-   rustup component add rustfmt clippy
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
-3. **Install development tools:**
+3. **Install dependencies:**
    ```bash
-   cargo install cargo-watch cargo-edit cargo-outdated cargo-audit
-   cargo install cargo-tarpaulin  # For code coverage
+   pip install -r requirements.txt
    ```
 
-4. **Set up pre-commit hooks:**
+4. **Set up development tools:**
    ```bash
-   cp scripts/pre-commit .git/hooks/
-   chmod +x .git/hooks/pre-commit
+   pip install black flake8 pytest pytest-cov
+   ```
+
+5. **Set API keys:**
+   ```bash
+   export OPENAI_API_KEY="your-key"
    ```
 
 ## Project Structure
 
 ```
 briefxai/
-├── src/                    # Source code
-│   ├── lib.rs             # Library entry point
-│   ├── main.rs            # Binary entry point
-│   ├── config.rs          # Configuration handling
-│   ├── types.rs           # Core data types
-│   ├── analysis/          # Analysis modules
-│   ├── preprocessing/     # Data preprocessing
-│   ├── llm/              # LLM provider integrations
-│   └── web/              # Web server and API
-├── tests/                 # Integration tests
-├── benches/              # Benchmarks
-├── migrations/           # Database migrations
-├── assets/               # Static assets
-├── docs/                 # Documentation
-└── scripts/              # Development scripts
+├── python/                  # Active Python implementation
+│   ├── app.py               # Flask web application entry point
+│   ├── cli_simple.py        # Command line interface
+│   ├── cli.py               # Extended CLI
+│   ├── requirements.txt     # Python dependencies
+│   ├── setup.py             # Package setup
+│   ├── tests/               # Test suite
+│   └── briefx/              # Python package
+│       ├── analysis/        # Analysis modules
+│       │   ├── clio.py      # Clio methodology implementation
+│       │   ├── clustering.py # Clustering algorithms
+│       │   ├── dimensionality.py # UMAP/dimensionality reduction
+│       │   ├── pipeline.py  # Analysis pipeline orchestration
+│       │   └── session_manager.py # Session lifecycle management
+│       ├── config.py        # Configuration handling
+│       ├── data/            # Data models and parsers
+│       │   ├── models.py    # ConversationData, Message, etc.
+│       │   └── parsers.py   # JSON, CSV, text parsers
+│       ├── error_recovery.py # Error handling and recovery
+│       ├── examples.py      # Example data generation
+│       ├── monitoring.py    # System monitoring
+│       ├── persistence/     # Database and session storage
+│       ├── preprocessing/   # Data preprocessing pipeline
+│       ├── providers/       # LLM provider integrations
+│       │   ├── base.py      # BaseProvider interface
+│       │   ├── factory.py   # Provider factory and registry
+│       │   ├── openai.py    # OpenAI provider
+│       │   ├── anthropic.py # Anthropic provider
+│       │   ├── gemini.py    # Google Gemini provider
+│       │   ├── ollama.py    # Ollama (local) provider
+│       │   └── huggingface.py # HuggingFace provider
+│       ├── prompts/         # LLM prompt templates
+│       └── utils.py         # Shared utilities
+├── briefxai_ui_data/        # Frontend static assets (HTML/CSS/JS)
+├── docs/                    # Documentation
+├── migrations/              # Database migration scripts
+└── Dockerfile               # Container build configuration
 ```
 
 ## Development Workflow
@@ -63,53 +87,37 @@ briefxai/
 ### Running the Application
 
 ```bash
-# Development mode with hot reload
-cargo watch -x run
+# Development server (auto-reloads on file changes via Flask debug mode)
+FLASK_DEBUG=1 python app.py
 
-# Run with debug logging
-RUST_LOG=debug cargo run
+# Standard server
+python app.py
 
-# Run with specific config
-cargo run -- serve --config dev.toml
+# Custom port
+BRIEFX_PORT=3000 python app.py
 
-# Release mode
-cargo run --release
+# With debug logging
+BRIEFX_LOG_LEVEL=DEBUG python app.py
 ```
 
 ### Code Formatting
 
 ```bash
-# Format all code
-cargo fmt
+# Format all Python code
+black briefx/
 
-# Check formatting without changes
-cargo fmt -- --check
+# Check formatting without changing files
+black briefx/ --check
 ```
 
 ### Linting
 
 ```bash
-# Run clippy with all targets
-cargo clippy --all-targets --all-features
+# Run flake8
+flake8 briefx/
 
-# Strict mode (treat warnings as errors)
-cargo clippy -- -D warnings
-
-# With pedantic lints
-cargo clippy -- -W clippy::pedantic
-```
-
-### Building
-
-```bash
-# Debug build
-cargo build
-
-# Release build with optimizations
-cargo build --release
-
-# Build for specific target
-cargo build --target x86_64-unknown-linux-musl
+# With specific rules
+flake8 briefx/ --max-line-length=100
 ```
 
 ## Testing
@@ -118,270 +126,124 @@ cargo build --target x86_64-unknown-linux-musl
 
 ```bash
 # Run all tests
-cargo test
+python -m pytest tests/
 
-# Run with output displayed
-cargo test -- --nocapture
+# Run with verbose output
+python -m pytest tests/ -v
 
-# Run specific test
-cargo test test_session_manager
+# Run a specific test file
+python -m pytest tests/test_complete.py
 
-# Run tests in single thread (for debugging)
-cargo test -- --test-threads=1
+# Run tests matching a name pattern
+python -m pytest tests/ -k "test_clustering"
 
-# Run only unit tests
-cargo test --lib
+# Run with code coverage
+python -m pytest tests/ --cov=briefx --cov-report=html
 
-# Run only integration tests
-cargo test --test '*'
-
-# Run with coverage
-cargo tarpaulin --out Html
+# Stop on first failure
+python -m pytest tests/ -x
 ```
 
 ### Writing Tests
 
-#### Unit Tests
+Place tests in `python/tests/`. Use pytest fixtures for shared setup:
 
-Place unit tests in the same file as the code:
+```python
+# tests/test_analysis.py
+import pytest
+from briefx.data.models import ConversationData, Message
+from briefx.examples import generate_example_conversations
 
-```rust
-// src/analysis/session_manager.rs
+@pytest.fixture
+def sample_conversations():
+    return generate_example_conversations(count=5, seed=42)
 
-impl SessionManager {
-    pub fn create_session(&self, config: Config) -> Result<Session> {
-        // Implementation
-    }
-}
+def test_conversation_has_messages(sample_conversations):
+    for conv in sample_conversations:
+        assert len(conv.messages) > 0
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_create_session() {
-        let manager = SessionManager::new();
-        let config = Config::default();
-        let session = manager.create_session(config).unwrap();
-        assert_eq!(session.state, SessionState::Created);
-    }
-
-    #[tokio::test]
-    async fn test_async_operation() {
-        // Async test implementation
-    }
-}
-```
-
-#### Integration Tests
-
-Place integration tests in the `tests/` directory:
-
-```rust
-// tests/integration_test.rs
-
-use briefxai::{AnalysisEngine, Config};
-
-#[tokio::test]
-async fn test_full_analysis_pipeline() {
-    let config = Config::test_config();
-    let engine = AnalysisEngine::new(config).await.unwrap();
-    
-    let result = engine.analyze_file("test_data.json").await.unwrap();
-    assert!(!result.is_empty());
-}
-```
-
-#### Property-Based Tests
-
-Use proptest for property-based testing:
-
-```rust
-use proptest::prelude::*;
-
-proptest! {
-    #[test]
-    fn test_never_panics(s: String) {
-        let _ = parse_conversation(&s);  // Should never panic
-    }
-}
+def test_message_roles(sample_conversations):
+    valid_roles = {"user", "assistant", "system"}
+    for conv in sample_conversations:
+        for msg in conv.messages:
+            assert msg.role in valid_roles
 ```
 
 ### Test Organization
 
 ```
 tests/
-├── common/              # Shared test utilities
-│   └── mod.rs
-├── integration_test.rs  # Integration tests
-├── api_test.rs         # API endpoint tests
-└── e2e_test.rs         # End-to-end tests
+├── test_complete.py      # End-to-end integration tests
+├── test_models.py        # Data model tests
+├── test_pipeline.py      # Analysis pipeline tests
+├── test_providers.py     # LLM provider tests
+└── test_preprocessing.py # Preprocessing pipeline tests
 ```
 
-## Debugging
+## Adding Features
 
-### Using the Debugger
+### Adding a New LLM Provider
 
-#### VS Code
+1. Create `python/briefx/providers/myprovider.py`:
 
-1. Install the Rust extension
-2. Add launch configuration:
+```python
+from .base import BaseProvider
 
-```json
-{
-    "version": "0.2.0",
-    "configurations": [
-        {
-            "type": "lldb",
-            "request": "launch",
-            "name": "Debug executable",
-            "cargo": {
-                "args": ["build", "--bin=briefxai"],
-                "filter": {
-                    "name": "briefxai",
-                    "kind": "bin"
-                }
-            },
-            "args": ["serve"],
-            "cwd": "${workspaceFolder}"
-        }
-    ]
-}
+class MyProvider(BaseProvider):
+    def __init__(self, api_key: str, model: str = "my-model"):
+        self.api_key = api_key
+        self.model = model
+
+    async def complete(self, prompt: str, **kwargs) -> str:
+        # Call your provider's API
+        ...
+
+    async def embed(self, text: str) -> list[float]:
+        # Generate embeddings
+        ...
 ```
 
-#### Command Line
+2. Register in `python/briefx/providers/factory.py`:
 
-```bash
-# Using rust-gdb
-rust-gdb target/debug/briefxai
+```python
+from .myprovider import MyProvider
 
-# Using lldb
-rust-lldb target/debug/briefxai
+# Add to the provider registry
 ```
 
-### Logging
+### Adding a New Analysis Feature
 
-```rust
-use tracing::{debug, error, info, trace, warn};
+1. Add the feature logic to `python/briefx/analysis/`
+2. Wire it into the pipeline in `pipeline.py`
+3. Add a corresponding API endpoint in `app.py`
+4. Write tests in `python/tests/`
 
-// Add logging to your code
-info!("Starting analysis for session {}", session_id);
-debug!("Configuration: {:?}", config);
-trace!("Detailed trace information");
-warn!("Deprecated feature used");
-error!("Failed to connect: {}", err);
+### Modifying the Frontend
 
-// Structured logging
-info!(
-    session_id = %session_id,
-    conversation_count = conversations.len(),
-    "Starting batch processing"
-);
-```
-
-Run with different log levels:
-
-```bash
-RUST_LOG=trace cargo run
-RUST_LOG=briefxai=debug cargo run
-RUST_LOG=briefxai::analysis=trace cargo run
-```
-
-## Performance Optimization
-
-### Profiling
-
-```bash
-# CPU profiling with flamegraph
-cargo install flamegraph
-cargo flamegraph
-
-# Memory profiling with valgrind
-valgrind --tool=massif target/release/briefxai
-ms_print massif.out.<pid>
-
-# Using cargo-profiling
-cargo install cargo-profiling
-cargo profiling callgrind
-```
-
-### Benchmarking
-
-```rust
-// benches/performance.rs
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
-
-fn benchmark_clustering(c: &mut Criterion) {
-    c.bench_function("kmeans_1000", |b| {
-        b.iter(|| {
-            cluster_conversations(black_box(&conversations))
-        });
-    });
-}
-
-criterion_group!(benches, benchmark_clustering);
-criterion_main!(benches);
-```
-
-Run benchmarks:
-
-```bash
-cargo bench
-cargo bench -- --save-baseline before
-cargo bench -- --baseline before
-```
-
-## Database Management
-
-### Migrations
-
-```bash
-# Create new migration
-./scripts/create_migration.sh "add_indexes"
-
-# Run migrations
-cargo run -- migrate
-
-# Rollback migration
-cargo run -- migrate rollback
-```
-
-### Database Debugging
-
-```bash
-# Open SQLite shell
-sqlite3 data/briefxai.db
-
-# Common queries
-.tables
-.schema sessions
-SELECT * FROM sessions WHERE state = 'running';
-```
+The frontend assets live in `briefxai_ui_data/`. This is a static SPA served by Flask. Edit the HTML, CSS, and JS files there and refresh the browser — no build step required.
 
 ## API Development
 
-### Testing API Endpoints
+### Testing Endpoints
 
 ```bash
-# Test with curl
-curl -X POST http://localhost:8080/api/sessions \
+# Health check
+curl http://localhost:8080/api/monitoring/health
+
+# Upload conversations
+curl -X POST http://localhost:8080/api/conversations \
   -H "Content-Type: application/json" \
-  -d '{"name": "Test Session"}'
+  -d '{"conversations": [{"messages": [{"role": "user", "content": "Hello"}]}]}'
 
-# Using httpie
-http POST localhost:8080/api/sessions name="Test Session"
-
-# Load testing with vegeta
-echo "POST http://localhost:8080/api/sessions" | \
-  vegeta attack -duration=30s -rate=10 | \
-  vegeta report
+# Get results
+curl http://localhost:8080/api/analysis/results
 ```
 
 ### WebSocket Testing
 
 ```javascript
-// WebSocket test client
-const ws = new WebSocket('ws://localhost:8080/ws');
+// Browser console or Node.js
+const ws = new WebSocket('ws://localhost:8080/ws/analysis');
 
 ws.onopen = () => {
     ws.send(JSON.stringify({
@@ -391,193 +253,83 @@ ws.onopen = () => {
 };
 
 ws.onmessage = (event) => {
-    console.log('Received:', event.data);
+    console.log('Received:', JSON.parse(event.data));
 };
 ```
 
-## Documentation
+## Database Management
 
-### Generating Documentation
+BriefX uses SQLite by default. The database file is created automatically at `python/briefx.db`.
+
+### Inspecting the Database
 
 ```bash
-# Generate and open documentation
-cargo doc --open
+# Open SQLite shell
+sqlite3 python/briefx.db
 
-# Include private items
-cargo doc --document-private-items
+# List tables
+.tables
 
-# With dependencies
-cargo doc --no-deps
+# Check sessions
+SELECT id, state, created_at FROM sessions;
+
+# Exit
+.quit
 ```
 
-### Writing Documentation
+### Switching to PostgreSQL
 
-```rust
-/// Analyzes a batch of conversations and extracts insights.
-///
-/// This function processes conversations in parallel, extracting facets,
-/// generating embeddings, and performing clustering analysis.
-///
-/// # Arguments
-///
-/// * `conversations` - Vector of conversations to analyze
-/// * `config` - Analysis configuration
-///
-/// # Returns
-///
-/// Returns `Ok(AnalysisResult)` on success, or an error if analysis fails.
-///
-/// # Examples
-///
-/// ```
-/// use briefxai::{analyze_batch, Config};
-///
-/// let config = Config::default();
-/// let result = analyze_batch(conversations, &config)?;
-/// println!("Found {} clusters", result.clusters.len());
-/// ```
-///
-/// # Errors
-///
-/// This function will return an error if:
-/// - The provider is unavailable
-/// - Input validation fails
-/// - Database operations fail
-pub async fn analyze_batch(
-    conversations: Vec<Conversation>,
-    config: &Config,
-) -> Result<AnalysisResult, AnalysisError> {
-    // Implementation
-}
+```bash
+export DATABASE_URL="postgresql://user:password@localhost/briefx"
+python app.py
+```
+
+Migration scripts are in `migrations/` and run automatically on startup.
+
+## Debugging
+
+### Enable Debug Logging
+
+```bash
+BRIEFX_LOG_LEVEL=DEBUG python app.py
+```
+
+### Using Python Debugger
+
+```python
+# Add a breakpoint in your code
+import pdb; pdb.set_trace()
+# or in Python 3.7+
+breakpoint()
+```
+
+### Checking Provider Connectivity
+
+```bash
+# Test via API
+curl -X POST http://localhost:8080/api/providers/openai/test
 ```
 
 ## Continuous Integration
 
-### GitHub Actions Workflow
+Tests are expected to pass before merging PRs. Run the full test suite locally before submitting:
 
-```yaml
-# .github/workflows/ci.yml
-name: CI
-
-on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
-
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-      - uses: actions-rs/cargo@v1
-        with:
-          command: test
-      
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          components: rustfmt, clippy
-      - run: cargo fmt -- --check
-      - run: cargo clippy -- -D warnings
+```bash
+black briefx/ --check && flake8 briefx/ && python -m pytest tests/ -v
 ```
 
 ## Release Process
 
-### Version Management
-
-```bash
-# Update version in Cargo.toml
-cargo set-version 2.2.0
-
-# Create git tag
-git tag -a v2.2.0 -m "Release version 2.2.0"
-git push origin v2.2.0
-```
-
-### Building Releases
-
-```bash
-# Build for multiple targets
-./scripts/build_releases.sh
-
-# Create release artifacts
-tar -czf briefxai-linux-x64.tar.gz target/release/briefxai
-zip briefxai-windows-x64.zip target/release/briefxai.exe
-```
-
-## Troubleshooting
-
-### Common Issues
-
-#### Compilation Errors
-
-```bash
-# Clean build
-cargo clean
-cargo build
-
-# Update dependencies
-cargo update
-
-# Check for breaking changes
-cargo outdated
-```
-
-#### Test Failures
-
-```bash
-# Run with backtrace
-RUST_BACKTRACE=1 cargo test
-
-# Run specific test with output
-cargo test test_name -- --nocapture
-```
-
-#### Performance Issues
-
-```bash
-# Profile with release build
-cargo build --release
-perf record target/release/briefxai
-perf report
-```
-
-## Best Practices
-
-### Code Quality
-
-1. **Error Handling**: Use `Result` types and avoid `unwrap()` in production code
-2. **Documentation**: Document all public APIs
-3. **Testing**: Maintain >80% code coverage
-4. **Dependencies**: Keep dependencies minimal and up-to-date
-5. **Security**: Run `cargo audit` regularly
-
-### Performance
-
-1. **Async/Await**: Use async for I/O operations
-2. **Parallelism**: Use rayon for CPU-bound tasks
-3. **Memory**: Avoid unnecessary allocations
-4. **Caching**: Implement caching for expensive operations
-
-### Git Workflow
-
-1. **Branches**: Use feature branches
-2. **Commits**: Write clear, atomic commits
-3. **Pull Requests**: Include tests and documentation
-4. **Reviews**: Request reviews before merging
+1. Update `CHANGELOG.md` with the new version's changes
+2. Bump the version in `setup.py`
+3. Create a git tag: `git tag -a v2.x.x -m "Release v2.x.x"`
+4. Push the tag: `git push origin v2.x.x`
 
 ## Resources
 
-- [Rust Book](https://doc.rust-lang.org/book/)
-- [Async Book](https://rust-lang.github.io/async-book/)
-- [Rust API Guidelines](https://rust-lang.github.io/api-guidelines/)
-- [Clippy Lints](https://rust-lang.github.io/rust-clippy/)
-- [Cargo Documentation](https://doc.rust-lang.org/cargo/)
+- [Flask Documentation](https://flask.palletsprojects.com/)
+- [pytest Documentation](https://docs.pytest.org/)
+- [black Documentation](https://black.readthedocs.io/)
+- [Clio Paper](https://arxiv.org/html/2412.13678v1)
+- [scikit-learn Documentation](https://scikit-learn.org/)
+- [UMAP Documentation](https://umap-learn.readthedocs.io/)

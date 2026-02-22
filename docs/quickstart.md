@@ -1,24 +1,26 @@
 # Quick Start Guide
 
-Get BriefXAI running in 5 minutes!
+Get BriefX running in 5 minutes!
 
 ## Prerequisites
 
-Before starting, ensure you have:
-- Rust 1.70+ installed ([Install Rust](https://rustup.rs/))
-- An API key from OpenAI or Google Gemini
-- 4GB of available RAM
-- 1GB of free disk space
+- Python 3.9+
+- An API key from OpenAI, Anthropic, or Google Gemini (or a local Ollama installation)
+- 2GB of available RAM
 
-## Step 1: Clone and Build
+## Step 1: Clone and Install
 
 ```bash
 # Clone the repository
 git clone https://github.com/briefcasebrain/briefxai.git
-cd briefxai
+cd briefxai/python
 
-# Build the project (takes 2-3 minutes)
-cargo build --release
+# Create and activate a virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
 ```
 
 ## Step 2: Configure API Keys
@@ -30,34 +32,33 @@ Choose your preferred AI provider:
 export OPENAI_API_KEY="sk-..."
 ```
 
-### Option B: Google Gemini
+### Option B: Anthropic Claude
 ```bash
-export GEMINI_API_KEY="AIza..."
+export ANTHROPIC_API_KEY="sk-ant-..."
 ```
 
-### Option C: Local Ollama (No API key needed)
+### Option C: Google Gemini
 ```bash
-# Install Ollama first
-curl -fsSL https://ollama.com/install.sh | sh
+export GOOGLE_API_KEY="AIza..."
+```
 
-# Pull a model
+### Option D: Local Ollama (No API key needed)
+```bash
+# Install Ollama first: https://ollama.com
 ollama pull llama2
-
-# Set the host
 export OLLAMA_HOST="http://localhost:11434"
 ```
 
 ## Step 3: Start the Server
 
 ```bash
-./target/release/briefxai serve
+python app.py
 ```
 
 You should see:
 ```
-Starting BriefXAI Web Interface
-BriefXAI is ready!
-Open your browser to: http://localhost:8080
+Starting BriefX Web Interface
+Server running on http://localhost:8080
 ```
 
 ## Step 4: Analyze Your First Conversation
@@ -72,6 +73,19 @@ Open your browser to: http://localhost:8080
    - Set privacy thresholds
 4. Click "Start Analysis"
 5. Watch real-time results appear!
+
+### Using the CLI
+
+```bash
+# Generate sample data for testing
+python cli_simple.py generate --count 20
+
+# Run a test analysis
+python cli_simple.py test
+
+# See all CLI options
+python cli_simple.py --help
+```
 
 ### Using the API
 
@@ -88,82 +102,44 @@ cat > conversations.json << 'EOF'
 ]
 EOF
 
-# Analyze via CLI
-./target/release/briefxai analyze \
-  --input conversations.json \
-  --output results/
+# Upload and analyze via REST API
+curl -X POST http://localhost:8080/api/conversations \
+  -H "Content-Type: application/json" \
+  -d @conversations.json
 ```
 
 ## Step 5: View Results
 
 Results include:
 - **Clusters** - Grouped similar conversations
-- **Facets** - Extracted dimensions (sentiment, topics, etc.)
+- **Facets** - Extracted dimensions (sentiment, topics, entities, etc.)
 - **Visualizations** - UMAP projections and cluster maps
 - **Insights** - Key patterns and trends
 
-## Common Commands
+## Common Issues
 
+### "API key not found"
+Ensure your API key is exported in the current shell:
 ```bash
-# Generate sample data for testing
-./target/release/briefxai example --count 100
+echo $OPENAI_API_KEY  # Should display your key
+```
 
-# Analyze with custom config
-./target/release/briefxai analyze \
-  --input data.json \
-  --config config.toml \
-  --output results/
+### "Port already in use"
+Set a different port:
+```bash
+BRIEFX_PORT=3000 python app.py
+```
 
-# Start server on custom port
-./target/release/briefxai serve --port 3000
-
-# Enable debug logging
-RUST_LOG=debug ./target/release/briefxai serve
+### "Module not found" errors
+Make sure you installed dependencies in the active virtual environment:
+```bash
+pip install -r requirements.txt
 ```
 
 ## Next Steps
 
-- Read the [full documentation](../README.md)
+- Read the [Getting Started guide](getting-started.md) for a deeper walkthrough
 - Explore [API endpoints](api.md)
 - Configure [advanced settings](configuration.md)
+- Read the [Architecture overview](architecture.md)
 - Join our [community](https://github.com/briefcasebrain/briefxai/discussions)
-
-## Troubleshooting
-
-### "API key not found"
-Ensure your API key is exported:
-```bash
-echo $OPENAI_API_KEY  # Should show your key
-```
-
-### "Port already in use"
-Change the port:
-```bash
-./target/release/briefxai serve --port 3000
-```
-
-### "Out of memory"
-Reduce batch size in config:
-```toml
-[performance]
-embedding_batch_size = 50
-llm_batch_size = 10
-```
-
-### "Rate limit exceeded"
-Add delays between requests:
-```toml
-[rate_limiting]
-requests_per_minute = 20
-```
-
-## Getting Help
-
-- 📖 [Documentation](../README.md)
-- 💬 [GitHub Discussions](https://github.com/briefcasebrain/briefxai/discussions)
-- 🐛 [Report Issues](https://github.com/briefcasebrain/briefxai/issues)
-- 📧 Email: <support@briefxai.com>
-
----
-
-**Ready to analyze conversations at scale? Let's go!**
